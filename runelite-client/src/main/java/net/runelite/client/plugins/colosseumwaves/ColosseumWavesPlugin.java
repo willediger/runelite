@@ -36,8 +36,8 @@ import net.runelite.client.util.ImageUtil;
 
 @PluginDescriptor(
         name = "Colosseum Waves",
-        description = "Tracks NPC spawns and coordinates in Fortis Colosseum waves",
-        tags = {"fortis", "colosseum", "waves", "spawns"}
+        description = "Capture Fortis Colosseum wave spawns and pillar stacks and generate shareable links to line of sight tool for analysis",
+        tags = {"fortis", "colosseum", "waves", "wave", "spawns", "los"}
 )
 @Slf4j
 public class ColosseumWavesPlugin extends Plugin
@@ -83,7 +83,7 @@ public class ColosseumWavesPlugin extends Plugin
     }
 
     // Pattern to match "Wave: X" messages
-    private static final Pattern WAVE_PATTERN = Pattern.compile("<col=ff3045>Wave: (\\d+)</col>");
+    private static final Pattern WAVE_PATTERN = Pattern.compile("Wave: (\\d+)");
 
     private Point currentPlayerLoSLocation = null;
     private Map<NPC, Point> npcLastPositions = new HashMap<>();
@@ -565,12 +565,6 @@ public class ColosseumWavesPlugin extends Plugin
             }
         }
 
-        // Remove trailing dot
-        if (urlBuilder.charAt(urlBuilder.length() - 1) == '.')
-        {
-            urlBuilder.setLength(urlBuilder.length() - 1);
-        }
-
         String url = urlBuilder.toString();
 
         // Update panel with the URL
@@ -653,12 +647,6 @@ public class ColosseumWavesPlugin extends Plugin
 
                 urlBuilder.append(".");
             }
-        }
-
-        // Remove trailing dot
-        if (urlBuilder.charAt(urlBuilder.length() - 1) == '.')
-        {
-            urlBuilder.setLength(urlBuilder.length() - 1);
         }
 
         // Add player position
