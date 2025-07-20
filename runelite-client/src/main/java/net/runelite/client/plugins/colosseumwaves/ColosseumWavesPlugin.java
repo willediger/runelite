@@ -43,6 +43,17 @@ import org.apache.commons.lang3.ArrayUtils;
 @Slf4j
 public class ColosseumWavesPlugin extends Plugin
 {
+    private static final boolean DEV_MODE = false;
+
+    private void seedTestData()
+    {
+        // Add test waves for scroll testing
+        for (int w = -8; w <= 0; w++)
+        {
+            panel.addWave(w);
+        }
+    }
+
     @Inject
     private Client client;
 
@@ -124,12 +135,11 @@ public class ColosseumWavesPlugin extends Plugin
 
         panel = injector.getInstance(ColosseumWavesPanel.class);
 
-//        // DEV-ONLY seeding: remove before commit!
-//        for (int w = -8; w <= 0; w++)
-//        {
-//            panel.addWave(w);
-//        }
-
+        if (DEV_MODE)
+        {
+            log.info("Colosseum Waves Plugin running in DEVELOPMENT MODE");
+            seedTestData();
+        }
 
         manticoreHandler = new ManticoreHandler(client, this);
 
@@ -185,10 +195,13 @@ public class ColosseumWavesPlugin extends Plugin
         {
             int newWave = Integer.parseInt(matcher.group(1));
 
-            // Reset panel ONLY when starting Wave 1 (new run)
-            if (newWave == 1 && panel != null)
+            if (!DEV_MODE)
             {
-                panel.reset();
+                // Reset panel ONLY when starting Wave 1 (new run)
+                if (newWave == 1 && panel != null )
+                {
+                    panel.reset();
+                }
             }
 
             currentWave = newWave;
