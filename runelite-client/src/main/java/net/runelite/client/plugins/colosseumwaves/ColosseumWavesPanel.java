@@ -22,6 +22,7 @@ public class ColosseumWavesPanel extends PluginPanel
     @Inject
     public ColosseumWavesPanel(ColosseumWavesPlugin plugin)
     {
+        super(false);
         this.plugin = plugin;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -74,7 +75,12 @@ public class ColosseumWavesPanel extends PluginPanel
         wavesContainer.setLayout(new BoxLayout(wavesContainer, BoxLayout.Y_AXIS));
         wavesContainer.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-        JScrollPane scrollPane = new JScrollPane(wavesContainer);
+        JPanel scrollWrapper = new JPanel();
+        scrollWrapper.setLayout(new BorderLayout());
+        scrollWrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        scrollWrapper.add(wavesContainer, BorderLayout.NORTH);
+
+        JScrollPane scrollPane = new JScrollPane(scrollWrapper);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
         scrollPane.setBackground(ColorScheme.DARK_GRAY_COLOR);
