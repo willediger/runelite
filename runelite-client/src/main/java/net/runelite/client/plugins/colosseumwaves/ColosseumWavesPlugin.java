@@ -33,6 +33,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
+import org.apache.commons.lang3.ArrayUtils;
 
 @PluginDescriptor(
         name = "Colosseum Waves",
@@ -48,13 +49,9 @@ public class ColosseumWavesPlugin extends Plugin
     @Inject
     private ClientToolbar clientToolbar;
 
-    @Inject
     private ColosseumWavesPanel panel;
-
-    // UI elements
     private NavigationButton navButton;
 
-    // Manticore handler
     private ManticoreHandler manticoreHandler;
 
     // Fortis Colosseum region ID
@@ -115,7 +112,6 @@ public class ColosseumWavesPlugin extends Plugin
     @Override
     protected void startUp() throws Exception
     {
-        // Reset state
         currentPlayerLoSLocation = null;
         npcLastPositions.clear();
         waveSpawns.clear();
@@ -126,14 +122,19 @@ public class ColosseumWavesPlugin extends Plugin
         expectingWaveSpawn = false;
         waveStartTime = 0;
 
-        // Create and add panel
         panel = injector.getInstance(ColosseumWavesPanel.class);
 
-        // Initialize manticore handler
+//        // DEV-ONLY seeding: remove before commit!
+//        for (int w = -8; w <= 0; w++)
+//        {
+//            panel.addWave(w);
+//        }
+
+
         manticoreHandler = new ManticoreHandler(client, this);
 
-        // Create navigation button
         final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "colosseum_icon.png");
+
         navButton = NavigationButton.builder()
                 .tooltip("Colosseum Waves")
                 .icon(icon)
@@ -147,7 +148,6 @@ public class ColosseumWavesPlugin extends Plugin
     @Override
     protected void shutDown() throws Exception
     {
-        // Clear manticore tracking
         if (manticoreHandler != null)
         {
             manticoreHandler.clear();
@@ -166,6 +166,8 @@ public class ColosseumWavesPlugin extends Plugin
 
         // Remove panel
         clientToolbar.removeNavigation(navButton);
+        panel = null;
+
     }
 
     @Subscribe
@@ -293,25 +295,7 @@ public class ColosseumWavesPlugin extends Plugin
 
     private boolean isInColosseum()
     {
-        Player localPlayer = client.getLocalPlayer();
-        if (localPlayer == null)
-        {
-            return false;
-        }
-
-        int[] regions = client.getMapRegions();
-        if (regions != null)
-        {
-            for (int region : regions)
-            {
-                if (region == COLOSSEUM_REGION_ID)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return client.isInInstancedRegion();
+        return ArrayUtils.contains(client.getMapRegions(), COLOSSEUM_REGION_ID);
     }
 
     @Subscribe

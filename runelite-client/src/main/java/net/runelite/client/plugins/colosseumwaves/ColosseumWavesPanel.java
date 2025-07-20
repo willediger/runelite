@@ -10,7 +10,9 @@ import java.awt.event.MouseEvent;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class ColosseumWavesPanel extends PluginPanel
 {
     private final ColosseumWavesPlugin plugin;
@@ -86,74 +88,63 @@ public class ColosseumWavesPanel extends PluginPanel
     {
         try
         {
-            System.out.println("[DEBUG] Opening URL: " + url);
             Desktop.getDesktop().browse(new URI(url));
-            System.out.println("[DEBUG] URL opened successfully");
         }
         catch (Exception ex)
         {
-            System.out.println("[DEBUG] Error opening URL: " + ex.getMessage());
-            ex.printStackTrace();
+            log.debug("[DEBUG] Error opening URL: {}", ex);
         }
     }
 
     public void addWave(int waveNumber)
     {
-        System.out.println("[DEBUG ColosseumWavesPanel] addWave called for wave " + waveNumber);
+        log.debug("[DEBUG ColosseumWavesPanel] addWave called for wave {}", waveNumber);
         SwingUtilities.invokeLater(() -> {
-            System.out.println("[DEBUG ColosseumWavesPanel] addWave executing in Swing thread for wave " + waveNumber);
+            log.debug("[DEBUG ColosseumWavesPanel] addWave executing in Swing thread for wave {}", waveNumber);
             WavePanel wavePanel = new WavePanel(waveNumber);
             wavePanels.add(wavePanel);
             wavesContainer.add(wavePanel);
             wavesContainer.add(Box.createRigidArea(new Dimension(0, 5)));
 
-            // Force immediate update
             wavesContainer.revalidate();
-            wavesContainer.repaint();
-
-            // Also try updating the parent components
             this.revalidate();
-            this.repaint();
 
-            // Force layout
-            wavesContainer.doLayout();
-
-            System.out.println("[DEBUG ColosseumWavesPanel] Wave " + waveNumber + " panel added successfully");
-            System.out.println("[DEBUG ColosseumWavesPanel] Container has " + wavesContainer.getComponentCount() + " components");
-            System.out.println("[DEBUG ColosseumWavesPanel] Panel visible: " + wavePanel.isVisible());
+            log.debug("[DEBUG ColosseumWavesPanel] Wave {} panel added successfully", waveNumber);
+            log.debug("[DEBUG ColosseumWavesPanel] Container has {} components", wavesContainer.getComponentCount());
+            log.debug("[DEBUG ColosseumWavesPanel] Panel visible: {}", wavePanel.isVisible());
         });
     }
 
     public void setWaveSpawnUrl(int waveNumber, String url)
     {
-        System.out.println("[DEBUG ColosseumWavesPanel] setWaveSpawnUrl called for wave " + waveNumber + " with URL: " + url);
+        log.debug("[DEBUG ColosseumWavesPanel] setWaveSpawnUrl called for wave {} with URL: {}", waveNumber, url);
         SwingUtilities.invokeLater(() -> {
-            System.out.println("[DEBUG ColosseumWavesPanel] setWaveSpawnUrl executing in Swing thread for wave " + waveNumber);
+            log.debug("[DEBUG ColosseumWavesPanel] setWaveSpawnUrl executing in Swing thread for wave {}", waveNumber);
             if (waveNumber > 0 && waveNumber <= wavePanels.size())
             {
                 wavePanels.get(waveNumber - 1).setSpawnUrl(url);
-                System.out.println("[DEBUG ColosseumWavesPanel] Wave " + waveNumber + " spawn URL set successfully");
+                log.debug("[DEBUG ColosseumWavesPanel] Wave {} spawn URL set successfully", waveNumber);
             }
             else
             {
-                System.out.println("[DEBUG ColosseumWavesPanel] ERROR: Wave " + waveNumber + " not found! wavePanels.size() = " + wavePanels.size());
+                log.debug("[DEBUG ColosseumWavesPanel] ERROR: Wave {} not found! wavePanels.size() = {}", waveNumber, wavePanels.size());
             }
         });
     }
 
     public void setWaveReinforcementUrl(int waveNumber, String url)
     {
-        System.out.println("[DEBUG ColosseumWavesPanel] setWaveReinforcementUrl called for wave " + waveNumber + " with URL: " + url);
+        log.debug("[DEBUG ColosseumWavesPanel] setWaveReinforcementUrl called for wave {} with URL: {}", waveNumber, url);
         SwingUtilities.invokeLater(() -> {
-            System.out.println("[DEBUG ColosseumWavesPanel] setWaveReinforcementUrl executing in Swing thread for wave " + waveNumber);
+            log.debug("[DEBUG ColosseumWavesPanel] setWaveReinforcementUrl executing in Swing thread for wave {}", waveNumber);
             if (waveNumber > 0 && waveNumber <= wavePanels.size())
             {
                 wavePanels.get(waveNumber - 1).setReinforcementUrl(url);
-                System.out.println("[DEBUG ColosseumWavesPanel] Wave " + waveNumber + " reinforcement URL set successfully");
+                log.debug("[DEBUG ColosseumWavesPanel] Wave {} reinforcement URL set successfully", waveNumber);
             }
             else
             {
-                System.out.println("[DEBUG ColosseumWavesPanel] ERROR: Wave " + waveNumber + " not found! wavePanels.size() = " + wavePanels.size());
+                log.debug("[DEBUG ColosseumWavesPanel] ERROR: Wave {} not found! wavePanels.size() = {}", waveNumber, wavePanels.size());
             }
         });
     }
@@ -164,7 +155,6 @@ public class ColosseumWavesPanel extends PluginPanel
             wavePanels.clear();
             wavesContainer.removeAll();
             wavesContainer.revalidate();
-            wavesContainer.repaint();
         });
     }
 
@@ -272,7 +262,6 @@ public class ColosseumWavesPanel extends PluginPanel
                 reinforcementButton = createLinkButton("Reinforcements");
                 buttonsPanel.add(reinforcementButton);
                 buttonsPanel.revalidate();
-                buttonsPanel.repaint();
             }
 
             reinforcementButton.setEnabled(true);
@@ -295,7 +284,7 @@ public class ColosseumWavesPanel extends PluginPanel
             }
             catch (Exception ex)
             {
-                // Log error or show message
+                log.warn("Unable to open URL {}", url, ex);
             }
         }
     }
