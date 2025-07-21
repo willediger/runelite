@@ -28,34 +28,37 @@ public class ColosseumWavesPanel extends PluginPanel
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
 
-        // Create header panel with "Current LoS" button
+        // Create header panel with "Current LoS" button and "Waves" label
         JPanel headerPanel = new JPanel();
-        headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBackground(new Color(0x282828));
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // Current LoS button
         JButton currentLoSButton = new JButton("Current LoS");
         currentLoSButton.setFocusPainted(false);
-        currentLoSButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        currentLoSButton.setBackground(new Color(0x1E1E1E));
         currentLoSButton.setForeground(Color.WHITE);
         currentLoSButton.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
         currentLoSButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        currentLoSButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        currentLoSButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, currentLoSButton.getPreferredSize().height));
 
         currentLoSButton.addMouseListener(new MouseAdapter()
         {
             @Override
             public void mouseEntered(MouseEvent e)
             {
-                currentLoSButton.setBackground(ColorScheme.DARK_GRAY_COLOR.brighter());
+                currentLoSButton.setBackground(new Color(0x1E1E1E).brighter());
             }
 
             @Override
             public void mouseExited(MouseEvent e)
             {
-                currentLoSButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+                currentLoSButton.setBackground(new Color(0x1E1E1E));
             }
         });
 
@@ -67,7 +70,23 @@ public class ColosseumWavesPanel extends PluginPanel
             }
         });
 
-        headerPanel.add(currentLoSButton, BorderLayout.CENTER);
+        // Waves label (styled as a button but non-functional)
+        JLabel wavesLabel = new JLabel("Waves");
+        wavesLabel.setOpaque(true);
+        wavesLabel.setBackground(new Color(0x1E1E1E));
+        wavesLabel.setForeground(Color.WHITE);
+        wavesLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        wavesLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        wavesLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        wavesLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, currentLoSButton.getPreferredSize().height));
+
+        headerPanel.add(currentLoSButton);
+        headerPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        headerPanel.add(wavesLabel);
+
         add(headerPanel, BorderLayout.NORTH);
 
         // Create scrollable container for waves
