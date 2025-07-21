@@ -19,15 +19,15 @@ public class ColosseumWavesPanel extends PluginPanel
     private final JPanel wavesContainer;
     private final List<WavePanel> wavePanels = new ArrayList<>();
 
+    private static final Color bgColor = ColorScheme.DARK_GRAY_COLOR;
+    private static final Color hoverColor = new Color(52, 52, 52);
+    private static final Color buttonColor = ColorScheme.DARKER_GRAY_COLOR;
+
     @Inject
     public ColosseumWavesPanel(ColosseumWavesPlugin plugin)
     {
         super(false);
         this.plugin = plugin;
-
-        final Color bgColor = ColorScheme.DARK_GRAY_COLOR;
-        final Color hoverColor = new Color(52, 52, 52);
-        final Color buttonColor = ColorScheme.DARKER_GRAY_COLOR;
 
         setBackground(bgColor);
         setLayout(new BorderLayout());
@@ -64,10 +64,11 @@ public class ColosseumWavesPanel extends PluginPanel
             }
         });
 
-        currentLoSButton.addActionListener(e -> {
-            // Get the current LoS link from the plugin
+        currentLoSButton.addActionListener(e ->
+        {
             String currentUrl = plugin.generateCurrentLoSLink();
-            if (currentUrl != null) {
+            if (currentUrl != null)
+            {
                 openWebpage(currentUrl);
             }
         });
@@ -92,18 +93,17 @@ public class ColosseumWavesPanel extends PluginPanel
         // Create scrollable container for waves
         wavesContainer = new JPanel();
         wavesContainer.setLayout(new BoxLayout(wavesContainer, BoxLayout.Y_AXIS));
-        wavesContainer.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        wavesContainer.setBackground(bgColor);
 
-        JPanel scrollWrapper = new JPanel();
-        scrollWrapper.setLayout(new BorderLayout());
-        scrollWrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        JPanel scrollWrapper = new JPanel(new BorderLayout());
+        scrollWrapper.setBackground(bgColor);
         scrollWrapper.add(wavesContainer, BorderLayout.NORTH);
 
         JScrollPane scrollPane = new JScrollPane(scrollWrapper);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
-        scrollPane.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        scrollPane.getViewport().setBackground(ColorScheme.DARK_GRAY_COLOR);
+        scrollPane.setBackground(bgColor);
+        scrollPane.getViewport().setBackground(bgColor);
         scrollPane.setBorder(null);
 
         add(scrollPane, BorderLayout.CENTER);
@@ -123,9 +123,8 @@ public class ColosseumWavesPanel extends PluginPanel
 
     public void addWave(int waveNumber)
     {
-        log.debug("[DEBUG ColosseumWavesPanel] addWave called for wave {}", waveNumber);
-        SwingUtilities.invokeLater(() -> {
-            log.debug("[DEBUG ColosseumWavesPanel] addWave executing in Swing thread for wave {}", waveNumber);
+        SwingUtilities.invokeLater(() ->
+        {
             WavePanel wavePanel = new WavePanel(waveNumber);
             wavePanels.add(wavePanel);
             wavesContainer.add(wavePanel);
@@ -133,50 +132,35 @@ public class ColosseumWavesPanel extends PluginPanel
 
             wavesContainer.revalidate();
             this.revalidate();
-
-            log.debug("[DEBUG ColosseumWavesPanel] Wave {} panel added successfully", waveNumber);
-            log.debug("[DEBUG ColosseumWavesPanel] Container has {} components", wavesContainer.getComponentCount());
-            log.debug("[DEBUG ColosseumWavesPanel] Panel visible: {}", wavePanel.isVisible());
         });
     }
 
     public void setWaveSpawnUrl(int waveNumber, String url)
     {
-        log.debug("[DEBUG ColosseumWavesPanel] setWaveSpawnUrl called for wave {} with URL: {}", waveNumber, url);
-        SwingUtilities.invokeLater(() -> {
-            log.debug("[DEBUG ColosseumWavesPanel] setWaveSpawnUrl executing in Swing thread for wave {}", waveNumber);
+        SwingUtilities.invokeLater(() ->
+        {
             if (waveNumber > 0 && waveNumber <= wavePanels.size())
             {
                 wavePanels.get(waveNumber - 1).setSpawnUrl(url);
-                log.debug("[DEBUG ColosseumWavesPanel] Wave {} spawn URL set successfully", waveNumber);
-            }
-            else
-            {
-                log.debug("[DEBUG ColosseumWavesPanel] ERROR: Wave {} not found! wavePanels.size() = {}", waveNumber, wavePanels.size());
             }
         });
     }
 
     public void setWaveReinforcementUrl(int waveNumber, String url)
     {
-        log.debug("[DEBUG ColosseumWavesPanel] setWaveReinforcementUrl called for wave {} with URL: {}", waveNumber, url);
-        SwingUtilities.invokeLater(() -> {
-            log.debug("[DEBUG ColosseumWavesPanel] setWaveReinforcementUrl executing in Swing thread for wave {}", waveNumber);
+        SwingUtilities.invokeLater(() ->
+        {
             if (waveNumber > 0 && waveNumber <= wavePanels.size())
             {
                 wavePanels.get(waveNumber - 1).setReinforcementUrl(url);
-                log.debug("[DEBUG ColosseumWavesPanel] Wave {} reinforcement URL set successfully", waveNumber);
-            }
-            else
-            {
-                log.debug("[DEBUG ColosseumWavesPanel] ERROR: Wave {} not found! wavePanels.size() = {}", waveNumber, wavePanels.size());
             }
         });
     }
 
     public void reset()
     {
-        SwingUtilities.invokeLater(() -> {
+        SwingUtilities.invokeLater(() ->
+        {
             wavePanels.clear();
             wavesContainer.removeAll();
             wavesContainer.revalidate();
@@ -185,56 +169,48 @@ public class ColosseumWavesPanel extends PluginPanel
 
     private static class WavePanel extends JPanel
     {
-        private final JLabel waveLabel;
+        private final JLabel waveNumberLabel;
         private final JButton spawnButton;
         private JButton reinforcementButton;
-        private final JPanel buttonsPanel;
         private final JPanel placeholderPanel;
-        private String spawnUrl;
-        private String reinforcementUrl;
 
         public WavePanel(int waveNumber)
         {
+            // Desired layout:  [number] [Spawn] [Reinforcements]
             setLayout(new BorderLayout());
-            setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
-                    BorderFactory.createEmptyBorder(5, 5, 5, 5)
-            ));
+            setBackground(bgColor);
+            setBorder(null); // No outline around each wave row
 
-            // Wave label
-            waveLabel = new JLabel("Wave " + waveNumber);
-            waveLabel.setForeground(Color.WHITE);
-            waveLabel.setFont(waveLabel.getFont().deriveFont(Font.BOLD));
-            waveLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
-            add(waveLabel, BorderLayout.NORTH);
+            JPanel row = new JPanel(new GridLayout(1, 3, 5, 0));
+            row.setBackground(getBackground());
 
-            // Buttons panel - always 2 columns
-            buttonsPanel = new JPanel();
-            buttonsPanel.setLayout(new GridLayout(1, 2, 5, 0));
-            buttonsPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+            // # label
+            waveNumberLabel = new JLabel(String.valueOf(waveNumber), SwingConstants.CENTER);
+            waveNumberLabel.setOpaque(true);
+            waveNumberLabel.setBackground(buttonColor);
+            waveNumberLabel.setForeground(Color.WHITE);
+            waveNumberLabel.setBorder(BorderFactory.createEmptyBorder(3, 10, 3, 10));
+            row.add(waveNumberLabel);
 
+            // Spawn button
             spawnButton = createLinkButton("Spawn");
-            buttonsPanel.add(spawnButton);
+            row.add(spawnButton);
 
-            // Add empty placeholder panel for the second column
+            // Placeholder (keeps 3rd column width until reinforcements arrive)
             placeholderPanel = new JPanel();
-            placeholderPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            buttonsPanel.add(placeholderPanel);
+            placeholderPanel.setOpaque(false);
+            row.add(placeholderPanel);
 
-            add(buttonsPanel, BorderLayout.CENTER);
+            add(row, BorderLayout.CENTER);
         }
 
         private JButton createLinkButton(String text)
         {
             JButton button = new JButton(text);
             button.setFocusPainted(false);
-            button.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            button.setBackground(buttonColor);
             button.setForeground(Color.GRAY);
-            button.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
-                    BorderFactory.createEmptyBorder(3, 5, 3, 5)
-            ));
+            button.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
             button.setEnabled(false);
             button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
@@ -245,14 +221,14 @@ public class ColosseumWavesPanel extends PluginPanel
                 {
                     if (button.isEnabled())
                     {
-                        button.setBackground(ColorScheme.DARK_GRAY_COLOR.brighter());
+                        button.setBackground(hoverColor);
                     }
                 }
 
                 @Override
                 public void mouseExited(MouseEvent e)
                 {
-                    button.setBackground(ColorScheme.DARK_GRAY_COLOR);
+                    button.setBackground(buttonColor);
                 }
             });
 
@@ -261,43 +237,33 @@ public class ColosseumWavesPanel extends PluginPanel
 
         public void setSpawnUrl(String url)
         {
-            this.spawnUrl = url;
             spawnButton.setEnabled(true);
             spawnButton.setForeground(Color.WHITE);
-
-            // Remove old listeners and add new one
             for (var listener : spawnButton.getActionListeners())
             {
                 spawnButton.removeActionListener(listener);
             }
-
             spawnButton.addActionListener(e -> openUrl(url));
         }
 
         public void setReinforcementUrl(String url)
         {
-            this.reinforcementUrl = url;
-
-            // Create reinforcement button only when reinforcements spawn
             if (reinforcementButton == null)
             {
-                // Remove placeholder and add reinforcement button
-                buttonsPanel.remove(placeholderPanel);
+                Container parent = placeholderPanel.getParent();
+                parent.remove(placeholderPanel);
 
                 reinforcementButton = createLinkButton("Reinforcements");
-                buttonsPanel.add(reinforcementButton);
-                buttonsPanel.revalidate();
+                parent.add(reinforcementButton);
+                parent.revalidate();
             }
 
             reinforcementButton.setEnabled(true);
             reinforcementButton.setForeground(Color.WHITE);
-
-            // Remove old listeners and add new one
             for (var listener : reinforcementButton.getActionListeners())
             {
                 reinforcementButton.removeActionListener(listener);
             }
-
             reinforcementButton.addActionListener(e -> openUrl(url));
         }
 
