@@ -37,13 +37,12 @@ import javax.swing.Box;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.border.EmptyBorder;
 import java.awt.Color;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Desktop;
-import java.awt.GridLayout;
 import java.awt.Container;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -55,16 +54,22 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ColosseumWavesPanel extends PluginPanel
 {
+	private static final int componentHeight = 30;
+	private static final int gapSize = 5;
+	private static final int waveNumberWidth = 33;
+	private static final int spawnButtonWidth = 55;
+	private static final int reinforcementsButtonWidth = 102;
+	private static final Color bgColor = ColorScheme.DARK_GRAY_COLOR;
+	private static final Color buttonColor = ColorScheme.DARKER_GRAY_COLOR;
+	private static final Color hoverColor = new Color(52, 52, 52);
+
 	private final ColosseumWavesPlugin plugin;
+
 	private final JPanel wavesContainer;
 	private final List<WavePanel> wavePanels = new ArrayList<>();
 
-	private static final Color bgColor = ColorScheme.DARK_GRAY_COLOR;
-	private static final Color hoverColor = new Color(52, 52, 52);
-	private static final Color buttonColor = ColorScheme.DARKER_GRAY_COLOR;
-
 	@Inject
-	public ColosseumWavesPanel(ColosseumWavesPlugin plugin)
+	public ColosseumWavesPanel(final ColosseumWavesPlugin plugin)
 	{
 		super(false);
 		this.plugin = plugin;
@@ -72,106 +77,62 @@ public class ColosseumWavesPanel extends PluginPanel
 		setBackground(bgColor);
 		setLayout(new BorderLayout());
 
-		// Create header panel with "Current LoS" button and "Waves" label
-		JPanel headerPanel = new JPanel();
-		headerPanel.setBackground(bgColor);
-		headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
-		headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+		// HEADER ("Current LoS" button + static "Waves" header)
+		JPanel header = new JPanel();
+		header.setOpaque(false);
+		header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+		header.setBorder(new EmptyBorder(gapSize, gapSize, gapSize, gapSize)); // outer margin
 
-		// Current LoS button
-		JButton currentLoSButton = new JButton("Current LoS");
-		currentLoSButton.setFocusPainted(false);
-		currentLoSButton.setBackground(buttonColor);
-		currentLoSButton.setForeground(Color.WHITE);
-		currentLoSButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-		currentLoSButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		currentLoSButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-		currentLoSButton.setPreferredSize(new Dimension(Integer.MAX_VALUE, 30));
-		currentLoSButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-
-		currentLoSButton.addMouseListener(new MouseAdapter()
+		JButton currentLoS = buildHeaderButton("Current LoS", buttonColor, hoverColor);
+		currentLoS.addActionListener(e ->
 		{
-			@Override
-			public void mouseEntered(MouseEvent e)
+			String url = plugin.generateCurrentLoSLink();
+			if (url != null)
 			{
-				currentLoSButton.setBackground(hoverColor);
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e)
-			{
-				currentLoSButton.setBackground(buttonColor);
+				openWebpage(url);
 			}
 		});
 
-		currentLoSButton.addActionListener(e ->
-		{
-			String currentUrl = plugin.generateCurrentLoSLink();
-			if (currentUrl != null)
-			{
-				openWebpage(currentUrl);
-			}
-		});
-
-		// Waves label (styled as a button but non-functional)
-		JLabel wavesLabel = new JLabel("Waves");
+		JLabel wavesLabel = new JLabel("Waves", SwingConstants.CENTER);
 		wavesLabel.setOpaque(true);
 		wavesLabel.setBackground(buttonColor);
 		wavesLabel.setForeground(Color.WHITE);
-		wavesLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-		wavesLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-		wavesLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		wavesLabel.setPreferredSize(new Dimension(Integer.MAX_VALUE, 30));
-		wavesLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+		wavesLabel.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+		wavesLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
 
-		headerPanel.add(currentLoSButton);
-		headerPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-		headerPanel.add(wavesLabel);
+		header.add(currentLoS);
+		header.add(Box.createRigidArea(new Dimension(0, gapSize)));
+		header.add(wavesLabel);
 
-		add(headerPanel, BorderLayout.NORTH);
+		add(header, BorderLayout.NORTH);
 
-		// Create scrollable container for waves
 		wavesContainer = new JPanel();
 		wavesContainer.setLayout(new BoxLayout(wavesContainer, BoxLayout.Y_AXIS));
 		wavesContainer.setBackground(bgColor);
 
-		JPanel scrollWrapper = new JPanel(new BorderLayout());
-		scrollWrapper.setBackground(bgColor);
-		scrollWrapper.add(wavesContainer, BorderLayout.NORTH);
+		JPanel wrapper = new JPanel(new BorderLayout());
+		wrapper.setBackground(bgColor);
+		wrapper.add(wavesContainer, BorderLayout.NORTH);
 
-		JScrollPane scrollPane = new JScrollPane(scrollWrapper);
-		scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-		scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
-		scrollPane.setBackground(bgColor);
-		scrollPane.getViewport().setBackground(bgColor);
-		scrollPane.setBorder(null);
+		JScrollPane scroll = new JScrollPane(wrapper);
+		scroll.setBackground(bgColor);
+		scroll.getViewport().setBackground(bgColor);
+		scroll.setBorder(null);
+		scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+		scroll.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
 
-		add(scrollPane, BorderLayout.CENTER);
-	}
-
-	private void openWebpage(String url)
-	{
-		try
-		{
-			Desktop.getDesktop().browse(new URI(url));
-		}
-		catch (Exception ex)
-		{
-			log.debug("[DEBUG] Error opening URL: {}", ex);
-		}
+		add(scroll, BorderLayout.CENTER);
 	}
 
 	public void addWave(int waveNumber)
 	{
 		SwingUtilities.invokeLater(() ->
 		{
-			WavePanel wavePanel = new WavePanel(waveNumber);
-			wavePanels.add(wavePanel);
-			wavesContainer.add(wavePanel);
-			wavesContainer.add(Box.createRigidArea(new Dimension(0, 5)));
-
+			WavePanel panel = new WavePanel(waveNumber);
+			wavePanels.add(panel);
+			wavesContainer.add(panel);
+			wavesContainer.add(Box.createRigidArea(new Dimension(0, gapSize))); // 10 px vertical spacing
 			wavesContainer.revalidate();
-			this.revalidate();
 		});
 	}
 
@@ -207,116 +168,151 @@ public class ColosseumWavesPanel extends PluginPanel
 		});
 	}
 
+	private static JButton buildHeaderButton(String text, Color bg, Color hover)
+	{
+		JButton b = new JButton(text);
+		b.setFocusPainted(false);
+		b.setBackground(bg);
+		b.setForeground(Color.WHITE);
+		b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		b.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+		b.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+		b.setBorder(BorderFactory.createEmptyBorder());
+
+		b.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				b.setBackground(hover);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				b.setBackground(bg);
+			}
+		});
+		return b;
+	}
+
+	private static void openWebpage(String url)
+	{
+		try
+		{
+			Desktop.getDesktop().browse(new URI(url));
+		}
+		catch (Exception ex)
+		{
+			log.debug("Failed to open URL {}", url, ex);
+		}
+	}
+
 	private static class WavePanel extends JPanel
 	{
-		private final JLabel waveNumberLabel;
+		private final JLabel numberLabel;
 		private final JButton spawnButton;
-		private JButton reinforcementButton;
-		private final JPanel placeholderPanel;
+		private JButton reinfButton;
+		private final JPanel placeholder;
 
-		public WavePanel(int waveNumber)
+		WavePanel(int wave)
 		{
-			// Desired layout:  [number] [Spawn] [Reinforcements]
+			setOpaque(false);
 			setLayout(new BorderLayout());
-			setBackground(bgColor);
-			setBorder(null); // No outline around each wave row
 
-			JPanel row = new JPanel(new GridLayout(1, 3, 5, 0));
-			row.setBackground(getBackground());
+			setBorder(new EmptyBorder(0, gapSize, 0, gapSize));
 
-			// # label
-			waveNumberLabel = new JLabel(String.valueOf(waveNumber), SwingConstants.CENTER);
-			waveNumberLabel.setOpaque(true);
-			waveNumberLabel.setBackground(buttonColor);
-			waveNumberLabel.setForeground(Color.WHITE);
-			waveNumberLabel.setBorder(BorderFactory.createEmptyBorder(3, 10, 3, 10));
-			row.add(waveNumberLabel);
+			JPanel row = new JPanel();
+			row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+			row.setOpaque(false);
+			row.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+			row.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
 
-			// Spawn button
-			spawnButton = createLinkButton("Spawn");
+			// Wave number label (33px wide)
+			numberLabel = buildCellLabel(String.valueOf(wave));
+			numberLabel.setPreferredSize(new Dimension(waveNumberWidth, componentHeight));
+			numberLabel.setMaximumSize(new Dimension(waveNumberWidth, componentHeight));
+			numberLabel.setMinimumSize(new Dimension(waveNumberWidth, componentHeight));
+			row.add(numberLabel);
+			row.add(Box.createRigidArea(new Dimension(gapSize, 0)));
+
+			// Spawn button (55px wide, disabled until url is set)
+			spawnButton = buildCellButton("Spawn");
+			spawnButton.setPreferredSize(new Dimension(spawnButtonWidth, componentHeight));
+			spawnButton.setMaximumSize(new Dimension(spawnButtonWidth, componentHeight));
+			spawnButton.setMinimumSize(new Dimension(spawnButtonWidth, componentHeight));
+			spawnButton.setEnabled(false);
+			spawnButton.setForeground(Color.GRAY);
 			row.add(spawnButton);
+			row.add(Box.createRigidArea(new Dimension(gapSize, 0)));
 
-			// Placeholder (keeps 3rd column width until reinforcements arrive)
-			placeholderPanel = new JPanel();
-			placeholderPanel.setOpaque(false);
-			row.add(placeholderPanel);
+			// placeholder – replaced when reinforcements spawn
+			placeholder = new JPanel();
+			placeholder.setOpaque(false);
+			placeholder.setPreferredSize(new Dimension(reinforcementsButtonWidth, componentHeight));
+			placeholder.setMaximumSize(new Dimension(reinforcementsButtonWidth, componentHeight));
+			placeholder.setMinimumSize(new Dimension(reinforcementsButtonWidth, componentHeight));
+			row.add(placeholder);
 
 			add(row, BorderLayout.CENTER);
 		}
 
-		private JButton createLinkButton(String text)
+
+		void setSpawnUrl(String url)
 		{
-			JButton button = new JButton(text);
-			button.setFocusPainted(false);
-			button.setBackground(buttonColor);
-			button.setForeground(Color.GRAY);
-			button.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
-			button.setEnabled(false);
-			button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-			button.addMouseListener(new MouseAdapter()
-			{
-				@Override
-				public void mouseEntered(MouseEvent e)
-				{
-					if (button.isEnabled())
-					{
-						button.setBackground(hoverColor);
-					}
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e)
-				{
-					button.setBackground(buttonColor);
-				}
-			});
-
-			return button;
+			enableButton(spawnButton, url);
 		}
 
-		public void setSpawnUrl(String url)
+		void setReinforcementUrl(String url)
 		{
-			spawnButton.setEnabled(true);
-			spawnButton.setForeground(Color.WHITE);
-			for (var listener : spawnButton.getActionListeners())
+			if (reinfButton == null)
 			{
-				spawnButton.removeActionListener(listener);
-			}
-			spawnButton.addActionListener(e -> openUrl(url));
-		}
-
-		public void setReinforcementUrl(String url)
-		{
-			if (reinforcementButton == null)
-			{
-				Container parent = placeholderPanel.getParent();
-				parent.remove(placeholderPanel);
-
-				reinforcementButton = createLinkButton("Reinforcements");
-				parent.add(reinforcementButton);
+				// Replace placeholder with actual button
+				Container parent = placeholder.getParent();
+				parent.remove(placeholder);
+				reinfButton = buildCellButton("Reinforcements");
+				parent.add(reinfButton);
 				parent.revalidate();
 			}
-
-			reinforcementButton.setEnabled(true);
-			reinforcementButton.setForeground(Color.WHITE);
-			for (var listener : reinforcementButton.getActionListeners())
-			{
-				reinforcementButton.removeActionListener(listener);
-			}
-			reinforcementButton.addActionListener(e -> openUrl(url));
+			enableButton(reinfButton, url);
 		}
 
-		private void openUrl(String url)
+		// --------------------------------------------------------------
+		// Helpers ------------------------------------------------------
+		// --------------------------------------------------------------
+		private static JLabel buildCellLabel(String txt)
 		{
-			try
+			JLabel l = new JLabel(txt, SwingConstants.CENTER);
+			l.setOpaque(true);
+			l.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+			l.setForeground(Color.WHITE);
+			l.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+			l.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+			return l;
+		}
+
+		private static JButton buildCellButton(String txt)
+		{
+			JButton b = new JButton(txt);
+			b.setFocusPainted(false);
+			b.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+			b.setForeground(Color.WHITE);
+			b.setBorder(BorderFactory.createEmptyBorder());
+			b.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+			b.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+			b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+			return b;
+		}
+
+		private static void enableButton(JButton b, String url)
+		{
+			for (var l : b.getActionListeners())
 			{
-				Desktop.getDesktop().browse(new URI(url));
+				b.removeActionListener(l);
 			}
-			catch (Exception ex)
-			{
-				log.warn("Unable to open URL {}", url, ex);
-			}
+			b.addActionListener(e -> openWebpage(url));
+			b.setEnabled(true);
+			b.setForeground(Color.WHITE);
 		}
 	}
 }
