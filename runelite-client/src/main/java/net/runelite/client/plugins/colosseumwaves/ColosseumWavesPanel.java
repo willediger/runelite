@@ -26,7 +26,7 @@ public class ColosseumWavesPanel extends PluginPanel
         this.plugin = plugin;
 
         final Color bgColor = ColorScheme.DARK_GRAY_COLOR;
-        final Color hoverColor = ColorScheme.DARKER_GRAY_HOVER_COLOR;
+        final Color hoverColor = new Color(52, 52, 52);
         final Color buttonColor = ColorScheme.DARKER_GRAY_COLOR;
 
         setBackground(bgColor);
