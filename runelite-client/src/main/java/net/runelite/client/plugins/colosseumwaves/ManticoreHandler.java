@@ -34,98 +34,126 @@ import java.util.ArrayList;
 
 public class ManticoreHandler
 {
-    private final Client client;
-    private final ColosseumWavesPlugin plugin;
+	private final Client client;
+	private final ColosseumWavesPlugin plugin;
 
-    private static final int MANTICORE_NPC_ID = 12818;
+	private static final int MANTICORE_NPC_ID = 12818;
 
-    private static final int MAGIC_ORB = 2681;
-    private static final int RANGED_ORB = 2683;
-    private static final int MELEE_ORB = 2685;
+	private static final int MAGIC_ORB = 2681;
+	private static final int RANGED_ORB = 2683;
+	private static final int MELEE_ORB = 2685;
 
-    public ManticoreHandler(Client client, ColosseumWavesPlugin plugin)
-    {
-        this.client = client;
-        this.plugin = plugin;
-    }
+	public ManticoreHandler(Client client, ColosseumWavesPlugin plugin)
+	{
+		this.client = client;
+		this.plugin = plugin;
+	}
 
-    private final Map<NPC, MData> manticores = new HashMap<>();
+	private final Map<NPC, MData> manticores = new HashMap<>();
 
-    private final Map<NPC, List<Integer>> orbSequences = new HashMap<>();
+	private final Map<NPC, List<Integer>> orbSequences = new HashMap<>();
 
-    private enum AType { MAGIC('m'), RANGED('r');
-        final char suf; AType(char c){suf=c;} }
+	private enum AType
+	{
+		MAGIC('m'), RANGED('r');
+		final char suf;
 
-    private static class MData
-    {
-        AType first = null;
-        char suf() { return first == AType.RANGED ? 'r' : 'm'; }
-        boolean known() { return first != null; }
-    }
+		AType(char c)
+		{
+			suf = c;
+		}
+	}
 
-    public char getManticoreLosSuffix(NPC n)
-    {
-        MData d = manticores.get(n);
-        return d != null ? d.suf() : 'm';
-    }
+	private static class MData
+	{
+		AType first = null;
 
-    public void clear()
-    {
-        manticores.clear();
-        orbSequences.clear();
-    }
+		char suf()
+		{
+			return first == AType.RANGED ? 'r' : 'm';
+		}
 
-    public void onNpcSpawned(NPC n)
-    {
-        if (n.getId() == MANTICORE_NPC_ID)
-        {
-            manticores.put(n, new MData());
-            orbSequences.put(n, new ArrayList<>());
-        }
-    }
+		boolean known()
+		{
+			return first != null;
+		}
+	}
 
-    public void onNpcDespawned(NPC n)
-    {
-        manticores.remove(n);
-        orbSequences.remove(n);
-    }
+	public char getManticoreLosSuffix(NPC n)
+	{
+		MData d = manticores.get(n);
+		return d != null ? d.suf() : 'm';
+	}
 
-    public void checkNPCGraphics(NPC npc)
-    {
-        if (npc == null || npc.getId() != MANTICORE_NPC_ID) return;
+	public void clear()
+	{
+		manticores.clear();
+		orbSequences.clear();
+	}
 
-        int graphic = npc.getGraphic();
-        if (graphic <= 0) return;
+	public void onNpcSpawned(NPC n)
+	{
+		if (n.getId() == MANTICORE_NPC_ID)
+		{
+			manticores.put(n, new MData());
+			orbSequences.put(n, new ArrayList<>());
+		}
+	}
 
-        if (graphic == MAGIC_ORB || graphic == RANGED_ORB || graphic == MELEE_ORB)
-        {
-            MData data = manticores.get(npc);
-            if (data == null) return;
+	public void onNpcDespawned(NPC n)
+	{
+		manticores.remove(n);
+		orbSequences.remove(n);
+	}
 
-            List<Integer> sequence = orbSequences.get(npc);
-            if (sequence == null) return;
+	public void checkNPCGraphics(NPC npc)
+	{
+		if (npc == null || npc.getId() != MANTICORE_NPC_ID)
+		{
+			return;
+		}
 
-            if (sequence.isEmpty() || sequence.get(sequence.size() - 1) != graphic)
-            {
-                sequence.add(graphic);
+		int graphic = npc.getGraphic();
+		if (graphic <= 0)
+		{
+			return;
+		}
 
-                if (sequence.size() == 1 && data.first == null)
-                {
-                    if (graphic == MAGIC_ORB)
-                    {
-                        data.first = AType.MAGIC;
-                    }
-                    else if (graphic == RANGED_ORB)
-                    {
-                        data.first = AType.RANGED;
-                    }
-                }
+		if (graphic == MAGIC_ORB || graphic == RANGED_ORB || graphic == MELEE_ORB)
+		{
+			MData data = manticores.get(npc);
+			if (data == null)
+			{
+				return;
+			}
 
-                if (sequence.size() >= 3)
-                {
-                    sequence.clear();
-                }
-            }
-        }
-    }
+			List<Integer> sequence = orbSequences.get(npc);
+			if (sequence == null)
+			{
+				return;
+			}
+
+			if (sequence.isEmpty() || sequence.get(sequence.size() - 1) != graphic)
+			{
+				sequence.add(graphic);
+
+				if (sequence.size() == 1 && data.first == null)
+				{
+					if (graphic == MAGIC_ORB)
+					{
+						data.first = AType.MAGIC;
+					}
+					else if (graphic == RANGED_ORB)
+					{
+						data.first = AType.RANGED;
+					}
+				}
+
+				if (sequence.size() >= 3)
+				{
+					sequence.clear();
+				}
+			}
+		}
+	}
 }
