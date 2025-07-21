@@ -25,40 +25,42 @@ public class ColosseumWavesPanel extends PluginPanel
         super(false);
         this.plugin = plugin;
 
-        setBackground(ColorScheme.DARK_GRAY_COLOR);
+        final Color bgColor = ColorScheme.DARK_GRAY_COLOR;
+        final Color hoverColor = ColorScheme.DARKER_GRAY_HOVER_COLOR;
+        final Color buttonColor = ColorScheme.DARKER_GRAY_COLOR;
+
+        setBackground(bgColor);
         setLayout(new BorderLayout());
 
         // Create header panel with "Current LoS" button and "Waves" label
         JPanel headerPanel = new JPanel();
-        headerPanel.setBackground(new Color(0x282828));
+        headerPanel.setBackground(bgColor);
         headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         // Current LoS button
         JButton currentLoSButton = new JButton("Current LoS");
         currentLoSButton.setFocusPainted(false);
-        currentLoSButton.setBackground(new Color(0x1E1E1E));
+        currentLoSButton.setBackground(buttonColor);
         currentLoSButton.setForeground(Color.WHITE);
-        currentLoSButton.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
-                BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
+        currentLoSButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         currentLoSButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         currentLoSButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        currentLoSButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, currentLoSButton.getPreferredSize().height));
+        currentLoSButton.setPreferredSize(new Dimension(Integer.MAX_VALUE, 30));
+        currentLoSButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
         currentLoSButton.addMouseListener(new MouseAdapter()
         {
             @Override
             public void mouseEntered(MouseEvent e)
             {
-                currentLoSButton.setBackground(new Color(0x1E1E1E).brighter());
+                currentLoSButton.setBackground(hoverColor);
             }
 
             @Override
             public void mouseExited(MouseEvent e)
             {
-                currentLoSButton.setBackground(new Color(0x1E1E1E));
+                currentLoSButton.setBackground(buttonColor);
             }
         });
 
@@ -73,18 +75,16 @@ public class ColosseumWavesPanel extends PluginPanel
         // Waves label (styled as a button but non-functional)
         JLabel wavesLabel = new JLabel("Waves");
         wavesLabel.setOpaque(true);
-        wavesLabel.setBackground(new Color(0x1E1E1E));
+        wavesLabel.setBackground(buttonColor);
         wavesLabel.setForeground(Color.WHITE);
-        wavesLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
-                BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
+        wavesLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         wavesLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         wavesLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        wavesLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, currentLoSButton.getPreferredSize().height));
+        wavesLabel.setPreferredSize(new Dimension(Integer.MAX_VALUE, 30));
+        wavesLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
         headerPanel.add(currentLoSButton);
-        headerPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        headerPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         headerPanel.add(wavesLabel);
 
         add(headerPanel, BorderLayout.NORTH);
