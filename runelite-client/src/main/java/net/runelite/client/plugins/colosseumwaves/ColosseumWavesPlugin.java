@@ -24,6 +24,7 @@
  */
 package net.runelite.client.plugins.colosseumwaves;
 
+import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,6 +52,7 @@ import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -62,7 +64,8 @@ import org.apache.commons.lang3.ArrayUtils;
 @PluginDescriptor(
 	name = "Colosseum Waves",
 	description = "Capture Fortis Colosseum wave spawns and pillar stacks and generate shareable links to line of sight tool for analysis",
-	tags = {"fortis", "colosseum", "waves", "wave", "spawns", "los"}
+	tags = {"fortis", "colosseum", "waves", "wave", "spawns", "los"},
+	configName = "colosseumwaves"
 )
 @Slf4j
 public class ColosseumWavesPlugin extends Plugin
@@ -72,6 +75,9 @@ public class ColosseumWavesPlugin extends Plugin
 
 	@Inject
 	private ClientToolbar clientToolbar;
+
+	@Inject
+	private ColosseumWavesConfig config;
 
 	private ColosseumWavesPanel panel;
 	private NavigationButton navButton;
@@ -164,6 +170,12 @@ public class ColosseumWavesPlugin extends Plugin
 			.build();
 
 		clientToolbar.addNavigation(navButton);
+	}
+
+	@Provides
+	ColosseumWavesConfig provideConfig(ConfigManager configManager)
+	{
+		return configManager.getConfig(ColosseumWavesConfig.class);
 	}
 
 	@Override
@@ -573,6 +585,24 @@ public class ColosseumWavesPlugin extends Plugin
 			}
 		}
 
+		// Add player position based on config settings
+		boolean shouldAddPlayerPos = false;
+		if (isReinforcementWave && config.includePlayerLocationReinforcements())
+		{
+			shouldAddPlayerPos = true;
+		}
+		else if (!isReinforcementWave && config.includePlayerLocationSpawns())
+		{
+			shouldAddPlayerPos = true;
+		}
+
+		if (shouldAddPlayerPos && currentPlayerLoSLocation != null)
+		{
+			int playerEncoded = currentPlayerLoSLocation.getX() + (256 * currentPlayerLoSLocation.getY());
+			urlBuilder.append("#");
+			urlBuilder.append(playerEncoded);
+		}
+
 		String url = urlBuilder.toString();
 
 		// Update panel with the URL
@@ -657,8 +687,8 @@ public class ColosseumWavesPlugin extends Plugin
 			}
 		}
 
-		// Add player position
-		if (currentPlayerLoSLocation != null)
+		// Add player position based on config setting
+		if (config.includePlayerLocationCurrent() && currentPlayerLoSLocation != null)
 		{
 			int playerEncoded = currentPlayerLoSLocation.getX() + (256 * currentPlayerLoSLocation.getY());
 			urlBuilder.append("#");

@@ -40,11 +40,10 @@ import java.awt.Color;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Desktop;
+import net.runelite.client.util.LinkBrowser;
 import java.awt.Container;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -87,7 +86,7 @@ public class ColosseumWavesPanel extends PluginPanel
 			String url = plugin.generateCurrentLoSLink();
 			if (url != null)
 			{
-				openWebpage(url);
+				LinkBrowser.browse(url);
 			}
 		});
 
@@ -185,18 +184,6 @@ public class ColosseumWavesPanel extends PluginPanel
 			}
 		});
 		return b;
-	}
-
-	private static void openWebpage(String url)
-	{
-		try
-		{
-			Desktop.getDesktop().browse(new URI(url));
-		}
-		catch (Exception ex)
-		{
-			log.debug("Failed to open URL {}", url, ex);
-		}
 	}
 
 	private static class WavePanel extends JPanel
@@ -316,7 +303,7 @@ public class ColosseumWavesPanel extends PluginPanel
 			{
 				b.removeActionListener(l);
 			}
-			b.addActionListener(e -> openWebpage(url));
+			b.addActionListener(e -> LinkBrowser.browse(url));
 			b.setEnabled(true);
 			b.setForeground(Color.WHITE);
 		}
