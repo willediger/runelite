@@ -204,10 +204,12 @@ public class ColosseumWavesPlugin extends Plugin
 			currentWave = newWave;
 			waveStartTick = client.getTickCount();
 			expectingWaveSpawn = true;
+
 			waveSpawns.clear();
 			activeNPCs.clear();
 			waveComplete = false;
 			isReinforcementWave = false;
+			log.debug("wave: {}, tick: {}", newWave, waveStartTick);
 		}
 	}
 
@@ -218,15 +220,7 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			if (!isInColosseum())
 			{
-				inColosseum = false;
-				npcLastPositions.clear();
-				waveSpawns.clear();
-				activeNPCs.clear();
-				currentWave = 0;
-				isReinforcementWave = false;
-				expectingWaveSpawn = false;
-				waveStartTick = 0;
-				lastWaveSpawnTick = 0;
+				resetState();
 			}
 		}
 	}
@@ -247,15 +241,7 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 		else if (inColosseum && !isInColosseum())
 		{
-			inColosseum = false;
-			npcLastPositions.clear();
-			waveSpawns.clear();
-			activeNPCs.clear();
-			currentWave = 0;
-			isReinforcementWave = false;
-			expectingWaveSpawn = false;
-			waveStartTick = 0;
-			lastWaveSpawnTick = 0;
+			resetState();
 		}
 
 		// Track player position for LoS coordinates
