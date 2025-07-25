@@ -22,18 +22,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package net.runelite.client.plugins.colosseumwaves;
+package com.colosseumwaves;
 
 import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -88,30 +89,25 @@ public class ColosseumWavesPlugin extends Plugin
 	private static final int COLOSSEUM_REGION_ID = 7216;
 
 	// NPCs to exclude from tracking
-	private static final Set<String> EXCLUDED_NPC_NAMES = new HashSet<>();
-
-	static
-	{
-		EXCLUDED_NPC_NAMES.add("Minimus");
-		EXCLUDED_NPC_NAMES.add("Sol Heredit");
-		EXCLUDED_NPC_NAMES.add("Fremennik warband berserker");
-		EXCLUDED_NPC_NAMES.add("Fremennik warband archer");
-		EXCLUDED_NPC_NAMES.add("Fremennik warband seer");
-	}
+	private static final Set<String> EXCLUDED_NPC_NAMES = ImmutableSet.of(
+		"Minimus",
+		"Sol Heredit",
+		"Fremennik warband berserker",
+		"Fremennik warband archer",
+		"Fremennik warband seer"
+	);
 
 	// Colosseum wave NPCs with their LoS tool ID mapping
-	private static final Map<Integer, Integer> COLOSSEUM_WAVE_NPCS = new HashMap<>();
-
-	static
-	{
-		COLOSSEUM_WAVE_NPCS.put(12811, 1); // Serpent shaman
-		COLOSSEUM_WAVE_NPCS.put(12817, 2); // Javelin Colossus
-		COLOSSEUM_WAVE_NPCS.put(12810, 3); // Jaguar warrior
-		COLOSSEUM_WAVE_NPCS.put(12818, 4); // Manticore
-		COLOSSEUM_WAVE_NPCS.put(12812, 5); // Minotaur
-		COLOSSEUM_WAVE_NPCS.put(12813, 5); // Minotaur (Red Flag)
-		COLOSSEUM_WAVE_NPCS.put(12819, 6); // Shockwave Colossus
-	}
+	private static final Map<Integer, Integer> COLOSSEUM_WAVE_NPCS =
+		ImmutableMap.<Integer, Integer>builder()
+			.put(12811, 1) // Serpent shaman
+			.put(12817, 2) // Javelin Colossus
+			.put(12810, 3) // Jaguar warrior
+			.put(12818, 4) // Manticore
+			.put(12812, 5) // Minotaur
+			.put(12813, 5) // Minotaur (Red Flag)
+			.put(12819, 6) // Shockwave Colossus
+			.build();
 
 	// Pattern to match "Wave: X" messages
 	private static final Pattern WAVE_PATTERN = Pattern.compile("Wave: (\\d+)");
@@ -119,8 +115,8 @@ public class ColosseumWavesPlugin extends Plugin
 	private Point currentPlayerLoSLocation = null;
 	private Map<NPC, Point> npcLastPositions = new HashMap<>();
 	private List<NPCSpawn> waveSpawns = new ArrayList<>();
-	private long lastWaveSpawnTime = 0;
-	private long waveStartTime = 0;
+	private int lastWaveSpawnTick = 0;
+	private int waveStartTick = 0;
 	private boolean waveComplete = false;
 	private boolean inColosseum = false;
 	private int currentWave = 0;
@@ -143,21 +139,18 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
+	@Provides
+	ColosseumWavesConfig provideConfig(ConfigManager configManager)
+	{
+		return configManager.getConfig(ColosseumWavesConfig.class);
+	}
+
 	@Override
 	protected void startUp() throws Exception
 	{
-		currentPlayerLoSLocation = null;
-		npcLastPositions.clear();
-		waveSpawns.clear();
-		activeNPCs.clear();
-		inColosseum = false;
-		currentWave = 0;
-		isReinforcementWave = false;
-		expectingWaveSpawn = false;
-		waveStartTime = 0;
+		resetState();
 
 		panel = injector.getInstance(ColosseumWavesPanel.class);
-
 		manticoreHandler = new ManticoreHandler(client, this);
 
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "colosseum_icon.png");
@@ -172,12 +165,6 @@ public class ColosseumWavesPlugin extends Plugin
 		clientToolbar.addNavigation(navButton);
 	}
 
-	@Provides
-	ColosseumWavesConfig provideConfig(ConfigManager configManager)
-	{
-		return configManager.getConfig(ColosseumWavesConfig.class);
-	}
-
 	@Override
 	protected void shutDown() throws Exception
 	{
@@ -186,21 +173,11 @@ public class ColosseumWavesPlugin extends Plugin
 			manticoreHandler.clear();
 		}
 
-		// Clean up
-		currentPlayerLoSLocation = null;
-		npcLastPositions.clear();
-		waveSpawns.clear();
-		activeNPCs.clear();
-		inColosseum = false;
-		currentWave = 0;
-		isReinforcementWave = false;
-		expectingWaveSpawn = false;
-		waveStartTime = 0;
-
-		// Remove panel
 		clientToolbar.removeNavigation(navButton);
 		panel = null;
+		navButton = null;
 
+		resetState();
 	}
 
 	@Subscribe
@@ -225,18 +202,12 @@ public class ColosseumWavesPlugin extends Plugin
 			}
 
 			currentWave = newWave;
-			waveStartTime = System.currentTimeMillis();
+			waveStartTick = client.getTickCount();
 			expectingWaveSpawn = true;
 			waveSpawns.clear();
 			activeNPCs.clear();
 			waveComplete = false;
 			isReinforcementWave = false;
-
-			// Add wave to panel
-			if (panel != null)
-			{
-				panel.addWave(currentWave);
-			}
 		}
 	}
 
@@ -254,7 +225,8 @@ public class ColosseumWavesPlugin extends Plugin
 				currentWave = 0;
 				isReinforcementWave = false;
 				expectingWaveSpawn = false;
-				waveStartTime = 0;
+				waveStartTick = 0;
+				lastWaveSpawnTick = 0;
 			}
 		}
 	}
@@ -282,7 +254,8 @@ public class ColosseumWavesPlugin extends Plugin
 			currentWave = 0;
 			isReinforcementWave = false;
 			expectingWaveSpawn = false;
-			waveStartTime = 0;
+			waveStartTick = 0;
+			lastWaveSpawnTick = 0;
 		}
 
 		// Track player position for LoS coordinates
@@ -316,9 +289,14 @@ public class ColosseumWavesPlugin extends Plugin
 			trackNPCMovements();
 			checkManticoreGraphics();
 
-			// Generate LoS link after wave spawning is complete
+			// Generate LoS link after wave spawning is complete.
+			// Use >= 0 instead of > 1 for the tick difference so that the link
+			// is generated on the same game tick the NPCs visually spawn and
+			// the player's position has updated. This ensures the link is
+			// populated immediately when the wave appears, rather than waiting
+			// additional ticks.
 			if (waveComplete && !waveSpawns.isEmpty() &&
-				System.currentTimeMillis() - lastWaveSpawnTime > 500)
+				client.getTickCount() - lastWaveSpawnTick >= 0)
 			{
 				generateLoSToolLink();
 				waveComplete = false;
@@ -362,15 +340,15 @@ public class ColosseumWavesPlugin extends Plugin
 			// Store spawn position for LoS tool generation
 			if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 			{
-				long currentTime = System.currentTimeMillis();
+				int currentTick = client.getTickCount();
 
 				// Determine if this is a wave spawn or reinforcement
-				if (expectingWaveSpawn && waveStartTime > 0 && currentTime - waveStartTime < 10000)
+				if (expectingWaveSpawn && waveStartTick > 0 && (currentTick - waveStartTick) < 20)
 				{
 					expectingWaveSpawn = false;
 					isReinforcementWave = false;
 				}
-				else if (waveStartTime > 0 && currentTime - waveStartTime > 30000)
+				else if (waveStartTick > 0 && (currentTick - waveStartTick) > 50)
 				{
 					if (!isReinforcementWave)
 					{
@@ -378,7 +356,7 @@ public class ColosseumWavesPlugin extends Plugin
 					}
 				}
 
-				lastWaveSpawnTime = currentTime;
+				lastWaveSpawnTick = currentTick;
 
 				NPCSpawn spawn = new NPCSpawn(npc.getId(), npcLocation, npc.getName());
 				activeNPCs.put(npc, spawn);
@@ -614,6 +592,7 @@ public class ColosseumWavesPlugin extends Plugin
 			}
 			else
 			{
+				panel.addWave(currentWave);
 				panel.setWaveSpawnUrl(currentWave, url);
 			}
 		}
@@ -625,9 +604,6 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
-	/**
-	 * Generate a LoS link for the current NPC positions
-	 */
 	public String generateCurrentLoSLink()
 	{
 		if (!inColosseum)
@@ -696,5 +672,19 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		return urlBuilder.toString();
+	}
+
+	private void resetState()
+	{
+		currentPlayerLoSLocation = null;
+		npcLastPositions.clear();
+		waveSpawns.clear();
+		activeNPCs.clear();
+		inColosseum = false;
+		currentWave = 0;
+		isReinforcementWave = false;
+		expectingWaveSpawn = false;
+		waveStartTick = 0;
+		lastWaveSpawnTick = 0;
 	}
 }

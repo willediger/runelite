@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package net.runelite.client.plugins.colosseumwaves;
+package com.colosseumwaves;
 
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
@@ -219,8 +219,6 @@ public class ColosseumWavesPanel extends PluginPanel
 			spawnButton.setPreferredSize(new Dimension(spawnButtonWidth, componentHeight));
 			spawnButton.setMaximumSize(new Dimension(spawnButtonWidth, componentHeight));
 			spawnButton.setMinimumSize(new Dimension(spawnButtonWidth, componentHeight));
-			spawnButton.setEnabled(false);
-			spawnButton.setForeground(Color.GRAY);
 			row.add(spawnButton);
 			row.add(Box.createRigidArea(new Dimension(gapSize, 0)));
 
