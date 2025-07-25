@@ -47,7 +47,6 @@ import net.runelite.api.Scene;
 import net.runelite.api.Tile;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.WorldView;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.NpcDespawned;
@@ -248,8 +247,7 @@ public class ColosseumWavesPlugin extends Plugin
 		if (inColosseum)
 		{
 			WorldPoint worldLocation = localPlayer.getWorldLocation();
-			WorldView wv = client.getTopLevelWorldView();
-			LocalPoint localPoint = LocalPoint.fromWorld(wv, worldLocation);
+			LocalPoint localPoint = LocalPoint.fromWorld(client, worldLocation);
 
 			if (localPoint != null)
 			{
@@ -463,20 +461,8 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private Point getNPCSceneLocation(NPC npc)
 	{
-		if (npc == null)
-		{
-			return null;
-		}
-
-		LocalPoint localPoint = npc.getLocalLocation();
-		if (localPoint == null)
-		{
-			return null;
-		}
-
 		WorldPoint worldPoint = npc.getWorldLocation();
-		WorldView wv = client.getTopLevelWorldView();
-		LocalPoint worldLocalPoint = LocalPoint.fromWorld(wv, worldPoint);
+		LocalPoint worldLocalPoint = LocalPoint.fromWorld(client, worldPoint);
 
 		if (worldLocalPoint == null)
 		{
