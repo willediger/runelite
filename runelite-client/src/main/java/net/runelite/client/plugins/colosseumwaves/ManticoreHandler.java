@@ -26,28 +26,26 @@ package net.runelite.client.plugins.colosseumwaves;
 
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
-
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
+@Singleton
 public class ManticoreHandler
 {
-	private final Client client;
-	private final ColosseumWavesPlugin plugin;
+	@Inject
+	private Client client;
 
 	private static final int MANTICORE_NPC_ID = 12818;
 
 	private static final int MAGIC_ORB_GRAPHIC_ID = 2681;
 	private static final int RANGED_ORB_GRAPHIC_ID = 2683;
 	private static final int MELEE_ORB_GRAPHIC_ID = 2685;
-
-	public ManticoreHandler(Client client, ColosseumWavesPlugin plugin)
-	{
-		this.client = client;
-		this.plugin = plugin;
-	}
 
 	private final Map<NPC, ManticoreData> manticores = new HashMap<>();
 
@@ -70,6 +68,10 @@ public class ManticoreHandler
 
 		char getLosSuffix()
 		{
+			if (firstAttack == null)
+			{
+				return 'u'; // Uncharged
+			}
 			return firstAttack == AttackType.RANGED ? 'r' : 'm';
 		}
 
@@ -82,7 +84,13 @@ public class ManticoreHandler
 	public char getManticoreLosSuffix(NPC npc)
 	{
 		ManticoreData data = manticores.get(npc);
-		return data != null ? data.getLosSuffix() : 'm';
+		return data != null ? data.getLosSuffix() : 'u';
+	}
+
+	public boolean isManticoreUncharged(NPC npc)
+	{
+		ManticoreData data = manticores.get(npc);
+		return data == null || !data.isPatternKnown();
 	}
 
 	public void clear()
@@ -142,10 +150,12 @@ public class ManticoreHandler
 					if (graphic == MAGIC_ORB_GRAPHIC_ID)
 					{
 						data.firstAttack = AttackType.MAGIC;
+						log.debug("Manticore detected as MAGIC first");
 					}
 					else if (graphic == RANGED_ORB_GRAPHIC_ID)
 					{
 						data.firstAttack = AttackType.RANGED;
+						log.debug("Manticore detected as RANGED first");
 					}
 				}
 

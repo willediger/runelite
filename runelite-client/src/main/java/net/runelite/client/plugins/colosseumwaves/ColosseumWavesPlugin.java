@@ -54,6 +54,7 @@ import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.GraphicChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -61,6 +62,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.callback.ClientThread;
 import org.apache.commons.lang3.ArrayUtils;
 
 @PluginDescriptor(
@@ -79,12 +81,16 @@ public class ColosseumWavesPlugin extends Plugin
 	private ClientToolbar clientToolbar;
 
 	@Inject
+	private ClientThread clientThread;
+
+	@Inject
 	private ColosseumWavesConfig config;
+
+	@Inject
+	private ManticoreHandler manticoreHandler;
 
 	private ColosseumWavesPanel panel;
 	private NavigationButton navButton;
-
-	private ManticoreHandler manticoreHandler;
 
 	// Fortis Colosseum region ID
 	private static final int COLOSSEUM_REGION_ID = 7216;
@@ -134,6 +140,7 @@ public class ColosseumWavesPlugin extends Plugin
 	private boolean waveComplete = false;
 	private boolean isReinforcementWave = false;
 	private boolean expectingWaveSpawn = false;
+	private boolean hasProcessedReinforcements = false; // Track if we've already processed reinforcements
 
 	// Timing
 	private int waveStartTick = 0;
@@ -143,6 +150,7 @@ public class ColosseumWavesPlugin extends Plugin
 	private final Map<NPC, Point> npcLastPositions = new HashMap<>();
 	private final Map<NPC, NPCSpawn> activeNPCs = new HashMap<>();
 	private final List<NPCSpawn> waveSpawns = new ArrayList<>();
+	private final List<NPCSpawn> reinforcementSpawns = new ArrayList<>();
 
 	// Player tracking
 	private Point currentPlayerLoSLocation = null;
@@ -154,6 +162,7 @@ public class ColosseumWavesPlugin extends Plugin
 		int npcId;
 		Point location;
 		String name;
+		NPC npcInstance;
 	}
 
 	@Provides
@@ -168,7 +177,6 @@ public class ColosseumWavesPlugin extends Plugin
 		resetState();
 
 		panel = injector.getInstance(ColosseumWavesPanel.class);
-		manticoreHandler = new ManticoreHandler(client, this);
 
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "colosseum_icon.png");
 
@@ -223,9 +231,11 @@ public class ColosseumWavesPlugin extends Plugin
 			expectingWaveSpawn = true;
 
 			waveSpawns.clear();
+			reinforcementSpawns.clear();
 			activeNPCs.clear();
 			waveComplete = false;
 			isReinforcementWave = false;
+			hasProcessedReinforcements = false;
 			log.debug("wave: {}, tick: {}", newWave, waveStartTick);
 		}
 	}
@@ -266,9 +276,8 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			updatePlayerLoSLocation(localPlayer);
 
-			// Track NPC movements and check manticore graphics
+			// Track NPC movements
 			trackNPCMovements();
-			checkManticoreGraphics();
 
 			// Handle wave spawns or reinforcements and update panel
 			if (waveComplete && !waveSpawns.isEmpty() &&
@@ -346,7 +355,7 @@ public class ColosseumWavesPlugin extends Plugin
 				determineSpawnType(currentTick);
 				lastWaveSpawnTick = currentTick;
 
-				NPCSpawn spawn = new NPCSpawn(npc.getId(), npcLocation, npc.getName());
+				NPCSpawn spawn = new NPCSpawn(npc.getId(), npcLocation, npc.getName(), npc);
 				activeNPCs.put(npc, spawn);
 
 				if (!isReinforcementWave)
@@ -357,7 +366,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 				if (isReinforcementWave)
 				{
-					captureAllNPCPositions();
+					captureReinforcementPositions();
 					log.debug("Captured all NPC positions for reinforcement wave");
 				}
 
@@ -425,31 +434,53 @@ public class ColosseumWavesPlugin extends Plugin
 				if (activeNPCs.containsKey(npc))
 				{
 					NPCSpawn oldSpawn = activeNPCs.get(npc);
-					activeNPCs.put(npc, new NPCSpawn(oldSpawn.npcId, currentPos, oldSpawn.name));
+					activeNPCs.put(npc, new NPCSpawn(oldSpawn.npcId, currentPos, oldSpawn.name, npc));
 				}
 			}
 		}
 	}
 
-	private void checkManticoreGraphics()
+	@Subscribe
+	public void onGraphicChanged(GraphicChanged event)
 	{
 		if (!inColosseum || manticoreHandler == null)
 		{
 			return;
 		}
 
-		for (NPC npc : client.getNpcs())
+		if (event.getActor() instanceof NPC)
 		{
-			if (npc != null && npc.getId() == 12818) // Manticore
+			NPC npc = (NPC) event.getActor();
+			if (npc.getId() == 12818) // Manticore
 			{
+				boolean wasUncharged = manticoreHandler.isManticoreUncharged(npc);
 				manticoreHandler.checkNPCGraphics(npc);
+				boolean isNowCharged = !manticoreHandler.isManticoreUncharged(npc);
+
+				log.debug("Manticore graphic changed - wasUncharged: {}, isNowCharged: {}, currentWave: {}, isReinforcement: {}",
+					wasUncharged, isNowCharged, currentWave, isReinforcementWave);
+
+				// If manticore just became charged, update the appropriate URL(s)
+				if (wasUncharged && isNowCharged && currentWave > 0)
+				{
+					// Always update spawn URL
+					log.debug("Updating spawn URL for wave {}", currentWave);
+					updateSpawnUrlForCurrentWave();
+
+					// If we've already processed reinforcements, also update reinforcement URL
+					if (hasProcessedReinforcements)
+					{
+						log.debug("Also updating reinforcement URL for wave {} (hasProcessedReinforcements=true)", currentWave);
+						updateReinforcementUrlForCurrentWave();
+					}
+				}
 			}
 		}
 	}
 
-	private void captureAllNPCPositions()
+	private void captureReinforcementPositions()
 	{
-		waveSpawns.clear();
+		reinforcementSpawns.clear();
 
 		for (Map.Entry<NPC, NPCSpawn> entry : activeNPCs.entrySet())
 		{
@@ -459,7 +490,7 @@ public class ColosseumWavesPlugin extends Plugin
 				Point currentPos = getNPCSceneLocation(npc);
 				if (currentPos != null)
 				{
-					waveSpawns.add(new NPCSpawn(npc.getId(), currentPos, npc.getName()));
+					reinforcementSpawns.add(new NPCSpawn(npc.getId(), currentPos, npc.getName(), npc));
 				}
 			}
 		}
@@ -507,29 +538,37 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void handleWaveSpawnsAndReinforcements()
 	{
-		if (waveSpawns.isEmpty() || panel == null || currentWave <= 0)
+		if (panel == null || currentWave <= 0)
 		{
 			return;
 		}
 
-		// Generate the LoS URL for the current spawn configuration
-		boolean includePlayer = isReinforcementWave ? config.includePlayerLocationReinforcements() : config.includePlayerLocationSpawns();
-		String url = buildLoSUrl(waveSpawns, includePlayer);
-
-		// Update the panel based on whether these are initial spawns or reinforcements
 		if (isReinforcementWave)
 		{
-			panel.setWaveReinforcementUrl(currentWave, url);
+			// Handle reinforcements
+			if (!reinforcementSpawns.isEmpty())
+			{
+				String url = buildLoSUrl(reinforcementSpawns, config.includePlayerLocationReinforcements());
+				panel.setWaveReinforcementUrl(currentWave, url);
+				hasProcessedReinforcements = true;
+				log.debug("Set hasProcessedReinforcements=true for wave {}", currentWave);
+			}
 		}
 		else
 		{
-			panel.addWave(currentWave);
-			panel.setWaveSpawnUrl(currentWave, url);
+			// Handle initial spawns
+			if (!waveSpawns.isEmpty())
+			{
+				String url = buildLoSUrl(waveSpawns, config.includePlayerLocationSpawns());
+				panel.addWave(currentWave);
+				panel.setWaveSpawnUrl(currentWave, url);
+			}
 		}
 
 		// Reset reinforcement flag after processing
 		if (isReinforcementWave)
 		{
+			log.debug("Resetting isReinforcementWave flag after processing");
 			isReinforcementWave = false;
 		}
 	}
@@ -577,7 +616,7 @@ public class ColosseumWavesPlugin extends Plugin
 		else if (ticksSinceWaveStart > REINFORCEMENT_THRESHOLD_TICKS && !isReinforcementWave)
 		{
 			isReinforcementWave = true;
-			log.debug("Reinforcement spawn detected at {} ticks after wave start", ticksSinceWaveStart);
+			log.debug("Setting isReinforcementWave=true at {} ticks after wave start", ticksSinceWaveStart);
 		}
 	}
 
@@ -598,19 +637,12 @@ public class ColosseumWavesPlugin extends Plugin
 			return;
 		}
 
-		char suffix = 'm'; // Default to mage-first
+		char suffix = 'u'; // Default to uncharged
 
-		// Find the corresponding NPC to get its attack pattern
-		for (Map.Entry<NPC, NPCSpawn> entry : activeNPCs.entrySet())
+		// Use the stored NPC instance to get its attack pattern
+		if (spawn.npcInstance != null && manticoreHandler != null)
 		{
-			NPCSpawn activeSpawn = entry.getValue();
-			if (activeSpawn.npcId == spawn.npcId &&
-				activeSpawn.location.equals(spawn.location) &&
-				manticoreHandler != null)
-			{
-				suffix = manticoreHandler.getManticoreLosSuffix(entry.getKey());
-				break;
-			}
+			suffix = manticoreHandler.getManticoreLosSuffix(spawn.npcInstance);
 		}
 
 		urlBuilder.append(suffix);
@@ -641,16 +673,42 @@ public class ColosseumWavesPlugin extends Plugin
 		return urlBuilder.toString();
 	}
 
+	private void updateSpawnUrlForCurrentWave()
+	{
+		if (panel != null && currentWave > 0 && !waveSpawns.isEmpty())
+		{
+			// Rebuild the spawn URL with updated manticore suffixes
+			// DO NOT recapture positions - keep original spawn locations
+			String url = buildLoSUrl(waveSpawns, config.includePlayerLocationSpawns());
+			panel.setWaveSpawnUrl(currentWave, url);
+			log.debug("Updated spawn URL for wave {}: {}", currentWave, url);
+		}
+	}
+
+	private void updateReinforcementUrlForCurrentWave()
+	{
+		if (panel != null && currentWave > 0 && !reinforcementSpawns.isEmpty())
+		{
+			// Rebuild the reinforcement URL with updated manticore suffixes
+			// Use reinforcement positions, not spawn positions
+			String url = buildLoSUrl(reinforcementSpawns, config.includePlayerLocationReinforcements());
+			panel.setWaveReinforcementUrl(currentWave, url);
+			log.debug("Updated reinforcement URL for wave {}: {}", currentWave, url);
+		}
+	}
+
 	private void resetState()
 	{
 		currentPlayerLoSLocation = null;
 		npcLastPositions.clear();
 		waveSpawns.clear();
+		reinforcementSpawns.clear();
 		activeNPCs.clear();
 		inColosseum = false;
 		currentWave = 0;
 		isReinforcementWave = false;
 		expectingWaveSpawn = false;
+		hasProcessedReinforcements = false;
 		waveStartTick = 0;
 		lastWaveSpawnTick = 0;
 	}

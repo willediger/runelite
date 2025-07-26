@@ -27,7 +27,6 @@ package net.runelite.client.plugins.colosseumwaves;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 import javax.inject.Inject;
-import javax.inject.Singleton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.BoxLayout;
@@ -43,7 +42,6 @@ import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import net.runelite.client.util.LinkBrowser;
-import java.awt.Container;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -51,7 +49,6 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Singleton
 public class ColosseumWavesPanel extends PluginPanel
 {
 	private static final int componentHeight = 30;
@@ -170,8 +167,7 @@ public class ColosseumWavesPanel extends PluginPanel
 	{
 		private final JLabel numberLabel;
 		private final JButton spawnButton;
-		private JButton reinfButton;
-		private final JPanel placeholder;
+		private final JButton reinfButton;
 
 		WavePanel(int wave)
 		{
@@ -195,14 +191,17 @@ public class ColosseumWavesPanel extends PluginPanel
 			// Spawn button
 			spawnButton = buildCellButton("Spawn");
 			setFixedSize(spawnButton, spawnButtonWidth, componentHeight);
+			spawnButton.setEnabled(false);
 			row.add(spawnButton);
 			row.add(Box.createRigidArea(new Dimension(gapSize, 0)));
 
-			// placeholder for reinforcements
-			placeholder = new JPanel();
-			placeholder.setOpaque(false);
-			setFixedSize(placeholder, reinforcementsButtonWidth, componentHeight);
-			row.add(placeholder);
+			// Reinforcements button
+			reinfButton = buildCellButton("Reinforcements");
+			setFixedSize(reinfButton, reinforcementsButtonWidth, componentHeight);
+			reinfButton.setHorizontalAlignment(SwingConstants.CENTER);
+			reinfButton.setEnabled(false);
+			reinfButton.setVisible(false);
+			row.add(reinfButton);
 
 			add(row, BorderLayout.CENTER);
 		}
@@ -215,17 +214,7 @@ public class ColosseumWavesPanel extends PluginPanel
 
 		void setReinforcementUrl(String url)
 		{
-			if (reinfButton == null)
-			{
-				// Replace placeholder with actual button
-				Container parent = placeholder.getParent();
-				parent.remove(placeholder);
-				reinfButton = buildCellButton("Reinforcements");
-				setFixedSize(reinfButton, reinforcementsButtonWidth, componentHeight);
-				reinfButton.setHorizontalAlignment(SwingConstants.CENTER);
-				parent.add(reinfButton);
-				parent.revalidate();
-			}
+			reinfButton.setVisible(true);
 			enableButton(reinfButton, url);
 		}
 
