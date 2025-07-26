@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import javax.inject.Inject;
@@ -582,16 +583,9 @@ public class ColosseumWavesPlugin extends Plugin
 	 */
 	private List<NPCSpawn> collectCurrentNPCSpawns()
 	{
-		List<NPCSpawn> currentSpawns = new ArrayList<>();
-		for (Map.Entry<NPC, NPCSpawn> entry : activeNPCs.entrySet())
-		{
-			NPCSpawn spawn = entry.getValue();
-			if (spawn != null && COLOSSEUM_WAVE_NPCS.containsKey(spawn.npcId))
-			{
-				currentSpawns.add(spawn);
-			}
-		}
-		return currentSpawns;
+		return activeNPCs.values().stream()
+			.filter(spawn -> spawn != null && COLOSSEUM_WAVE_NPCS.containsKey(spawn.npcId))
+			.collect(Collectors.toList());
 	}
 
 	/**

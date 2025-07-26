@@ -33,6 +33,7 @@ import javax.swing.JPanel;
 import javax.swing.BoxLayout;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.SwingConstants;
 import javax.swing.Box;
 import javax.swing.SwingUtilities;
@@ -162,30 +163,7 @@ public class ColosseumWavesPanel extends PluginPanel
 
 	private static JButton buildHeaderButton(String text, Color bg, Color hover)
 	{
-		JButton b = new JButton(text);
-		b.setFocusPainted(false);
-		b.setBackground(bg);
-		b.setForeground(Color.WHITE);
-		b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		b.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
-		b.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
-		b.setBorder(BorderFactory.createEmptyBorder());
-
-		b.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mouseEntered(MouseEvent e)
-			{
-				b.setBackground(hover);
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e)
-			{
-				b.setBackground(bg);
-			}
-		});
-		return b;
+		return createStyledButton(text, bg, hover, new Dimension(Integer.MAX_VALUE, componentHeight));
 	}
 
 	private static class WavePanel extends JPanel
@@ -210,26 +188,20 @@ public class ColosseumWavesPanel extends PluginPanel
 
 			// Wave number label
 			numberLabel = buildCellLabel(String.valueOf(wave));
-			numberLabel.setPreferredSize(new Dimension(waveNumberWidth, componentHeight));
-			numberLabel.setMaximumSize(new Dimension(waveNumberWidth, componentHeight));
-			numberLabel.setMinimumSize(new Dimension(waveNumberWidth, componentHeight));
+			setFixedSize(numberLabel, waveNumberWidth, componentHeight);
 			row.add(numberLabel);
 			row.add(Box.createRigidArea(new Dimension(gapSize, 0)));
 
 			// Spawn button
 			spawnButton = buildCellButton("Spawn");
-			spawnButton.setPreferredSize(new Dimension(spawnButtonWidth, componentHeight));
-			spawnButton.setMaximumSize(new Dimension(spawnButtonWidth, componentHeight));
-			spawnButton.setMinimumSize(new Dimension(spawnButtonWidth, componentHeight));
+			setFixedSize(spawnButton, spawnButtonWidth, componentHeight);
 			row.add(spawnButton);
 			row.add(Box.createRigidArea(new Dimension(gapSize, 0)));
 
 			// placeholder for reinforcements
 			placeholder = new JPanel();
 			placeholder.setOpaque(false);
-			placeholder.setPreferredSize(new Dimension(reinforcementsButtonWidth, componentHeight));
-			placeholder.setMaximumSize(new Dimension(reinforcementsButtonWidth, componentHeight));
-			placeholder.setMinimumSize(new Dimension(reinforcementsButtonWidth, componentHeight));
+			setFixedSize(placeholder, reinforcementsButtonWidth, componentHeight);
 			row.add(placeholder);
 
 			add(row, BorderLayout.CENTER);
@@ -249,9 +221,7 @@ public class ColosseumWavesPanel extends PluginPanel
 				Container parent = placeholder.getParent();
 				parent.remove(placeholder);
 				reinfButton = buildCellButton("Reinforcements");
-				reinfButton.setPreferredSize(new Dimension(reinforcementsButtonWidth, componentHeight));
-				reinfButton.setMaximumSize(new Dimension(reinforcementsButtonWidth, componentHeight));
-				reinfButton.setMinimumSize(new Dimension(reinforcementsButtonWidth, componentHeight));
+				setFixedSize(reinfButton, reinforcementsButtonWidth, componentHeight);
 				reinfButton.setHorizontalAlignment(SwingConstants.CENTER);
 				parent.add(reinfButton);
 				parent.revalidate();
@@ -272,29 +242,7 @@ public class ColosseumWavesPanel extends PluginPanel
 
 		private static JButton buildCellButton(String txt)
 		{
-			JButton b = new JButton(txt);
-			b.setFocusPainted(false);
-			b.setBackground(buttonColor);
-			b.setForeground(Color.WHITE);
-			b.setBorder(BorderFactory.createEmptyBorder());
-			b.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
-			b.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
-			b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-			b.addMouseListener(new MouseAdapter()
-			{
-				@Override
-				public void mouseEntered(MouseEvent e)
-				{
-					b.setBackground(hoverColor);
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e)
-				{
-					b.setBackground(buttonColor);
-				}
-			});
-			return b;
+			return createStyledButton(txt, buttonColor, hoverColor, new Dimension(Integer.MAX_VALUE, componentHeight));
 		}
 
 		private static void enableButton(JButton b, String url)
@@ -308,4 +256,49 @@ public class ColosseumWavesPanel extends PluginPanel
 			b.setForeground(Color.WHITE);
 		}
 	}
+
+	/**
+	 * Creates a styled button with hover effects.
+	 * Consolidates common button creation logic to avoid duplication.
+	 */
+	private static JButton createStyledButton(String text, Color bgColor, Color hoverColor, Dimension size)
+	{
+		JButton button = new JButton(text);
+		button.setFocusPainted(false);
+		button.setBackground(bgColor);
+		button.setForeground(Color.WHITE);
+		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		setFixedSize(button, size.width, size.height);
+		button.setBorder(BorderFactory.createEmptyBorder());
+
+		button.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				button.setBackground(hoverColor);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				button.setBackground(bgColor);
+			}
+		});
+
+		return button;
+	}
+
+	/**
+	 * Sets a fixed size for a component (preferred, maximum, and minimum).
+	 * Consolidates repetitive size setting code.
+	 */
+	private static void setFixedSize(JComponent component, int width, int height)
+	{
+		Dimension size = new Dimension(width, height);
+		component.setPreferredSize(size);
+		component.setMaximumSize(size);
+		component.setMinimumSize(size);
+	}
+
 }
