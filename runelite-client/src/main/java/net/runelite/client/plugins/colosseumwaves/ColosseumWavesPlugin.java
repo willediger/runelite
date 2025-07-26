@@ -147,14 +147,6 @@ public class ColosseumWavesPlugin extends Plugin
 	// Player tracking
 	private Point currentPlayerLoSLocation = null;
 
-	// Enum for different LoS link contexts
-	private enum LoSContext
-	{
-		SPAWN,
-		REINFORCEMENTS,
-		CURRENT
-	}
-
 	// Helper class to store NPC spawn info
 	@Value
 	private static class NPCSpawn
@@ -495,19 +487,12 @@ public class ColosseumWavesPlugin extends Plugin
 		return new Point(sceneX, sceneY);
 	}
 
-	/**
-	 * Checks if the given scene coordinates are within the Colosseum arena bounds.
-	 */
 	private boolean isWithinColosseumBounds(int sceneX, int sceneY)
 	{
 		return sceneX >= COLOSSEUM_MIN_SCENE_X && sceneX <= COLOSSEUM_MAX_SCENE_X
 			&& sceneY >= COLOSSEUM_MIN_SCENE_Y && sceneY <= COLOSSEUM_MAX_SCENE_Y;
 	}
 
-	/**
-	 * Converts scene coordinates to LoS tool coordinates.
-	 * The LoS tool uses a different coordinate system with (0,0) at the top-left.
-	 */
 	private Point convertToLoSCoordinates(Point sceneLocation)
 	{
 		int losX = sceneLocation.getX() - LOS_COORD_OFFSET_X;
@@ -520,11 +505,6 @@ public class ColosseumWavesPlugin extends Plugin
 		return new Point(losX, losY);
 	}
 
-	/**
-	 * Handles wave spawns (initial NPCs) and reinforcements (NPCs that spawn ~40s later).
-	 * Generates LoS links and updates the panel accordingly.
-	 * Called automatically after NPCs have finished spawning.
-	 */
 	private void handleWaveSpawnsAndReinforcements()
 	{
 		if (waveSpawns.isEmpty() || panel == null || currentWave <= 0)
@@ -533,8 +513,8 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		// Generate the LoS URL for the current spawn configuration
-		LoSContext context = isReinforcementWave ? LoSContext.REINFORCEMENTS : LoSContext.SPAWN;
-		String url = buildLoSUrl(waveSpawns, context);
+		boolean includePlayer = isReinforcementWave ? config.includePlayerLocationReinforcements() : config.includePlayerLocationSpawns();
+		String url = buildLoSUrl(waveSpawns, includePlayer);
 
 		// Update the panel based on whether these are initial spawns or reinforcements
 		if (isReinforcementWave)
@@ -554,12 +534,6 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
-	/**
-	 * Generates a LoS link for the current NPC positions in the colosseum.
-	 * Used by the "Current LoS" button to capture the current state.
-	 *
-	 * @return the LoS URL for current NPC positions, or null if not in colosseum or no NPCs
-	 */
 	public String generateCurrentLoSLink()
 	{
 		if (!inColosseum)
@@ -573,14 +547,9 @@ public class ColosseumWavesPlugin extends Plugin
 			return null;
 		}
 
-		return buildLoSUrl(currentSpawns, LoSContext.CURRENT);
+		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent());
 	}
 
-	/**
-	 * Collects the current positions of all tracked NPCs in the colosseum.
-	 *
-	 * @return a list of current NPC spawn positions
-	 */
 	private List<NPCSpawn> collectCurrentNPCSpawns()
 	{
 		return activeNPCs.values().stream()
@@ -588,11 +557,6 @@ public class ColosseumWavesPlugin extends Plugin
 			.collect(Collectors.toList());
 	}
 
-	/**
-	 * Determines if the current NPC spawn is part of the initial wave or a reinforcement.
-	 * Initial wave spawns occur within INITIAL_SPAWN_WINDOW_TICKS of the wave start.
-	 * Reinforcements spawn after REINFORCEMENT_THRESHOLD_TICKS.
-	 */
 	private void determineSpawnType(int currentTick)
 	{
 		if (waveStartTick <= 0)
@@ -617,47 +581,16 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
-	/**
-	 * Determines whether to include player position in the LoS link based on
-	 * the current context and config settings.
-	 *
-	 * @param context the context for which the LoS link is being generated
-	 */
-	private boolean shouldIncludePlayerPosition(LoSContext context)
-	{
-		switch (context)
-		{
-			case SPAWN:
-				return config.includePlayerLocationSpawns();
-			case REINFORCEMENTS:
-				return config.includePlayerLocationReinforcements();
-			case CURRENT:
-				return config.includePlayerLocationCurrent();
-			default:
-				return false;
-		}
-	}
 
-	/**
-	 * Appends the player position to the URL if configured and available.
-	 * Player position is encoded as a single integer: x + (256 * y)
-	 *
-	 * @param urlBuilder the StringBuilder to append to
-	 * @param context    the context for which the LoS link is being generated
-	 */
-	private void appendPlayerPositionIfNeeded(StringBuilder urlBuilder, LoSContext context)
+	private void appendPlayerPositionIfNeeded(StringBuilder urlBuilder, boolean includePlayer)
 	{
-		if (shouldIncludePlayerPosition(context) && currentPlayerLoSLocation != null)
+		if (includePlayer && currentPlayerLoSLocation != null)
 		{
 			int playerEncoded = currentPlayerLoSLocation.getX() + (256 * currentPlayerLoSLocation.getY());
 			urlBuilder.append("#").append(playerEncoded);
 		}
 	}
 
-	/**
-	 * Appends the appropriate suffix for manticore NPCs based on their attack pattern.
-	 * Manticores need a suffix to indicate whether they start with magic or ranged attacks.
-	 */
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NPCSpawn spawn)
 	{
 		if (spawn.npcId != 12818) // Not a manticore
@@ -683,14 +616,7 @@ public class ColosseumWavesPlugin extends Plugin
 		urlBuilder.append(suffix);
 	}
 
-	/**
-	 * Builds a LoS tool URL from a list of NPC spawns.
-	 *
-	 * @param spawns  the list of NPC spawns to encode
-	 * @param context the context for which the URL is being generated
-	 * @return the complete LoS tool URL
-	 */
-	private String buildLoSUrl(List<NPCSpawn> spawns, LoSContext context)
+	private String buildLoSUrl(List<NPCSpawn> spawns, boolean includePlayer)
 	{
 		StringBuilder urlBuilder = new StringBuilder("https://los.colosim.com/?");
 
@@ -709,8 +635,8 @@ public class ColosseumWavesPlugin extends Plugin
 			}
 		}
 
-		// Add player position based on context and config
-		appendPlayerPositionIfNeeded(urlBuilder, context);
+		// Add player position if configured
+		appendPlayerPositionIfNeeded(urlBuilder, includePlayer);
 
 		return urlBuilder.toString();
 	}
