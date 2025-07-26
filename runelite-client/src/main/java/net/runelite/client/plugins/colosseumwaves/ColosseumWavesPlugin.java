@@ -275,11 +275,11 @@ public class ColosseumWavesPlugin extends Plugin
 			trackNPCMovements();
 			checkManticoreGraphics();
 
-			// Generate LoS link after wave spawning is complete.
+			// Handle wave spawns or reinforcements and update panel
 			if (waveComplete && !waveSpawns.isEmpty() &&
 				client.getTickCount() - lastWaveSpawnTick >= 0)
 			{
-				generateLoSToolLink();
+				handleWaveSpawnsAndReinforcements();
 				waveComplete = false;
 			}
 		}
@@ -515,37 +515,46 @@ public class ColosseumWavesPlugin extends Plugin
 		return new Point(losX, losY);
 	}
 
-	private void generateLoSToolLink()
+	/**
+	 * Handles wave spawns (initial NPCs) and reinforcements (NPCs that spawn ~40s later).
+	 * Generates LoS links and updates the panel accordingly.
+	 * Called automatically after NPCs have finished spawning.
+	 */
+	private void handleWaveSpawnsAndReinforcements()
 	{
-		if (waveSpawns.isEmpty())
+		if (waveSpawns.isEmpty() || panel == null || currentWave <= 0)
 		{
 			return;
 		}
 
+		// Generate the LoS URL for the current spawn configuration
 		LoSContext context = isReinforcementWave ? LoSContext.REINFORCEMENTS : LoSContext.SPAWN;
 		String url = buildLoSUrl(waveSpawns, context);
 
-		// Update panel with the URL
-		if (panel != null && currentWave > 0)
+		// Update the panel based on whether these are initial spawns or reinforcements
+		if (isReinforcementWave)
 		{
-			if (isReinforcementWave)
-			{
-				panel.setWaveReinforcementUrl(currentWave, url);
-			}
-			else
-			{
-				panel.addWave(currentWave);
-				panel.setWaveSpawnUrl(currentWave, url);
-			}
+			panel.setWaveReinforcementUrl(currentWave, url);
+		}
+		else
+		{
+			panel.addWave(currentWave);
+			panel.setWaveSpawnUrl(currentWave, url);
 		}
 
-		// Reset reinforcement flag
+		// Reset reinforcement flag after processing
 		if (isReinforcementWave)
 		{
 			isReinforcementWave = false;
 		}
 	}
 
+	/**
+	 * Generates a LoS link for the current NPC positions in the colosseum.
+	 * Used by the "Current LoS" button to capture the current state.
+	 *
+	 * @return the LoS URL for current NPC positions, or null if not in colosseum or no NPCs
+	 */
 	public String generateCurrentLoSLink()
 	{
 		if (!inColosseum)
@@ -553,7 +562,22 @@ public class ColosseumWavesPlugin extends Plugin
 			return null;
 		}
 
-		// Collect current NPC positions
+		List<NPCSpawn> currentSpawns = collectCurrentNPCSpawns();
+		if (currentSpawns.isEmpty())
+		{
+			return null;
+		}
+
+		return buildLoSUrl(currentSpawns, LoSContext.CURRENT);
+	}
+
+	/**
+	 * Collects the current positions of all tracked NPCs in the colosseum.
+	 *
+	 * @return a list of current NPC spawn positions
+	 */
+	private List<NPCSpawn> collectCurrentNPCSpawns()
+	{
 		List<NPCSpawn> currentSpawns = new ArrayList<>();
 		for (Map.Entry<NPC, NPCSpawn> entry : activeNPCs.entrySet())
 		{
@@ -563,13 +587,7 @@ public class ColosseumWavesPlugin extends Plugin
 				currentSpawns.add(spawn);
 			}
 		}
-
-		if (currentSpawns.isEmpty())
-		{
-			return null;
-		}
-
-		return buildLoSUrl(currentSpawns, LoSContext.CURRENT);
+		return currentSpawns;
 	}
 
 	/**
@@ -604,7 +622,7 @@ public class ColosseumWavesPlugin extends Plugin
 	/**
 	 * Determines whether to include player position in the LoS link based on
 	 * the current context and config settings.
-	 * 
+	 *
 	 * @param context the context for which the LoS link is being generated
 	 */
 	private boolean shouldIncludePlayerPosition(LoSContext context)
@@ -625,9 +643,9 @@ public class ColosseumWavesPlugin extends Plugin
 	/**
 	 * Appends the player position to the URL if configured and available.
 	 * Player position is encoded as a single integer: x + (256 * y)
-	 * 
+	 *
 	 * @param urlBuilder the StringBuilder to append to
-	 * @param context the context for which the LoS link is being generated
+	 * @param context    the context for which the LoS link is being generated
 	 */
 	private void appendPlayerPositionIfNeeded(StringBuilder urlBuilder, LoSContext context)
 	{
@@ -669,8 +687,8 @@ public class ColosseumWavesPlugin extends Plugin
 
 	/**
 	 * Builds a LoS tool URL from a list of NPC spawns.
-	 * 
-	 * @param spawns the list of NPC spawns to encode
+	 *
+	 * @param spawns  the list of NPC spawns to encode
 	 * @param context the context for which the URL is being generated
 	 * @return the complete LoS tool URL
 	 */
