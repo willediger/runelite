@@ -246,44 +246,49 @@ public class ColosseumWavesPlugin extends Plugin
 		// Track player position for LoS coordinates
 		if (inColosseum)
 		{
-			WorldPoint worldLocation = localPlayer.getWorldLocation();
-			LocalPoint localPoint = LocalPoint.fromWorld(client, worldLocation);
-
-			if (localPoint != null)
-			{
-				Scene scene = client.getScene();
-				Tile[][][] tiles = scene.getTiles();
-
-				int sceneX = localPoint.getSceneX();
-				int sceneY = localPoint.getSceneY();
-				int plane = client.getPlane();
-
-				if (sceneX >= 0 && sceneX < 104 && sceneY >= 0 && sceneY < 104 && plane >= 0 && plane < 4)
-				{
-					Tile playerTile = tiles[plane][sceneX][sceneY];
-					if (playerTile != null)
-					{
-						Point sceneLocation = playerTile.getSceneLocation();
-						currentPlayerLoSLocation = convertToLoSCoordinates(sceneLocation);
-					}
-				}
-			}
+			updatePlayerLoSLocation(localPlayer);
 
 			// Track NPC movements and check manticore graphics
 			trackNPCMovements();
 			checkManticoreGraphics();
 
 			// Generate LoS link after wave spawning is complete.
-			// Use >= 0 instead of > 1 for the tick difference so that the link
-			// is generated on the same game tick the NPCs visually spawn and
-			// the player's position has updated. This ensures the link is
-			// populated immediately when the wave appears, rather than waiting
-			// additional ticks.
 			if (waveComplete && !waveSpawns.isEmpty() &&
 				client.getTickCount() - lastWaveSpawnTick >= 0)
 			{
 				generateLoSToolLink();
 				waveComplete = false;
+			}
+		}
+	}
+
+	private void updatePlayerLoSLocation(Player localPlayer)
+	{
+		if (localPlayer == null)
+		{
+			return;
+		}
+
+		WorldPoint worldLocation = localPlayer.getWorldLocation();
+		LocalPoint localPoint = LocalPoint.fromWorld(client, worldLocation);
+
+		if (localPoint != null)
+		{
+			Scene scene = client.getScene();
+			Tile[][][] tiles = scene.getTiles();
+
+			int sceneX = localPoint.getSceneX();
+			int sceneY = localPoint.getSceneY();
+			int plane = client.getPlane();
+
+			if (sceneX >= 0 && sceneX < 104 && sceneY >= 0 && sceneY < 104 && plane >= 0 && plane < 4)
+			{
+				Tile playerTile = tiles[plane][sceneX][sceneY];
+				if (playerTile != null)
+				{
+					Point sceneLocation = playerTile.getSceneLocation();
+					currentPlayerLoSLocation = convertToLoSCoordinates(sceneLocation);
+				}
 			}
 		}
 	}
