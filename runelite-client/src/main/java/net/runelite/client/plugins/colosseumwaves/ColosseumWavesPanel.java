@@ -27,6 +27,7 @@ package net.runelite.client.plugins.colosseumwaves;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.BoxLayout;
@@ -49,6 +50,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Singleton
 public class ColosseumWavesPanel extends PluginPanel
 {
 	private static final int componentHeight = 30;

@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import javax.inject.Inject;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
@@ -126,17 +127,24 @@ public class ColosseumWavesPlugin extends Plugin
 	private static final int LOS_COORD_OFFSET_Y = 83;
 	private static final int LOS_COORD_MAX = 33;
 
-	private Point currentPlayerLoSLocation = null;
-	private Map<NPC, Point> npcLastPositions = new HashMap<>();
-	private List<NPCSpawn> waveSpawns = new ArrayList<>();
-	private int lastWaveSpawnTick = 0;
-	private int waveStartTick = 0;
-	private boolean waveComplete = false;
+	// State tracking
 	private boolean inColosseum = false;
 	private int currentWave = 0;
-	private Map<NPC, NPCSpawn> activeNPCs = new HashMap<>();
+	private boolean waveComplete = false;
 	private boolean isReinforcementWave = false;
 	private boolean expectingWaveSpawn = false;
+
+	// Timing
+	private int waveStartTick = 0;
+	private int lastWaveSpawnTick = 0;
+
+	// NPC tracking
+	private final Map<NPC, Point> npcLastPositions = new HashMap<>();
+	private final Map<NPC, NPCSpawn> activeNPCs = new HashMap<>();
+	private final List<NPCSpawn> waveSpawns = new ArrayList<>();
+
+	// Player tracking
+	private Point currentPlayerLoSLocation = null;
 
 	// Enum for different LoS link contexts
 	private enum LoSContext
@@ -147,18 +155,12 @@ public class ColosseumWavesPlugin extends Plugin
 	}
 
 	// Helper class to store NPC spawn info
+	@Value
 	private static class NPCSpawn
 	{
-		final int npcId;
-		final Point location;
-		final String name;
-
-		NPCSpawn(int npcId, Point location, String name)
-		{
-			this.npcId = npcId;
-			this.location = location;
-			this.name = name;
-		}
+		int npcId;
+		Point location;
+		String name;
 	}
 
 	@Provides
@@ -357,11 +359,13 @@ public class ColosseumWavesPlugin extends Plugin
 				if (!isReinforcementWave)
 				{
 					waveSpawns.add(spawn);
+					log.debug("Added {} to wave spawns at position {}", npc.getName(), npcLocation);
 				}
 
 				if (isReinforcementWave)
 				{
 					captureAllNPCPositions();
+					log.debug("Captured all NPC positions for reinforcement wave");
 				}
 
 				if (!waveComplete)
