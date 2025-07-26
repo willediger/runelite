@@ -522,28 +522,8 @@ public class ColosseumWavesPlugin extends Plugin
 			return;
 		}
 
-		StringBuilder urlBuilder = new StringBuilder("https://los.colosim.com/?");
-
-		for (NPCSpawn spawn : waveSpawns)
-		{
-			Point losPos = convertToLoSCoordinates(spawn.location);
-			Integer losNpcId = COLOSSEUM_WAVE_NPCS.get(spawn.npcId);
-
-			if (losNpcId != null)
-			{
-				String spawnCode = String.format("%02d%02d%d", losPos.getX(), losPos.getY(), losNpcId);
-				urlBuilder.append(spawnCode);
-
-				appendManticoreSuffixIfNeeded(urlBuilder, spawn);
-				urlBuilder.append(".");
-			}
-		}
-
-		// Add player position based on config settings
 		LoSContext context = isReinforcementWave ? LoSContext.REINFORCEMENTS : LoSContext.SPAWN;
-		appendPlayerPositionIfNeeded(urlBuilder, context);
-
-		String url = urlBuilder.toString();
+		String url = buildLoSUrl(waveSpawns, context);
 
 		// Update panel with the URL
 		if (panel != null && currentWave > 0)
@@ -573,43 +553,23 @@ public class ColosseumWavesPlugin extends Plugin
 			return null;
 		}
 
-		waveSpawns.clear();
-
+		// Collect current NPC positions
+		List<NPCSpawn> currentSpawns = new ArrayList<>();
 		for (Map.Entry<NPC, NPCSpawn> entry : activeNPCs.entrySet())
 		{
 			NPCSpawn spawn = entry.getValue();
 			if (spawn != null && COLOSSEUM_WAVE_NPCS.containsKey(spawn.npcId))
 			{
-				waveSpawns.add(spawn);
+				currentSpawns.add(spawn);
 			}
 		}
 
-		if (waveSpawns.isEmpty())
+		if (currentSpawns.isEmpty())
 		{
 			return null;
 		}
 
-		StringBuilder urlBuilder = new StringBuilder("https://los.colosim.com/?");
-
-		for (NPCSpawn spawn : waveSpawns)
-		{
-			Point losPos = convertToLoSCoordinates(spawn.location);
-			Integer losNpcId = COLOSSEUM_WAVE_NPCS.get(spawn.npcId);
-
-			if (losNpcId != null)
-			{
-				String spawnCode = String.format("%02d%02d%d", losPos.getX(), losPos.getY(), losNpcId);
-				urlBuilder.append(spawnCode);
-
-				appendManticoreSuffixIfNeeded(urlBuilder, spawn);
-				urlBuilder.append(".");
-			}
-		}
-
-		// Add player position based on config setting
-		appendPlayerPositionIfNeeded(urlBuilder, LoSContext.CURRENT);
-
-		return urlBuilder.toString();
+		return buildLoSUrl(currentSpawns, LoSContext.CURRENT);
 	}
 
 	/**
@@ -705,6 +665,38 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		urlBuilder.append(suffix);
+	}
+
+	/**
+	 * Builds a LoS tool URL from a list of NPC spawns.
+	 * 
+	 * @param spawns the list of NPC spawns to encode
+	 * @param context the context for which the URL is being generated
+	 * @return the complete LoS tool URL
+	 */
+	private String buildLoSUrl(List<NPCSpawn> spawns, LoSContext context)
+	{
+		StringBuilder urlBuilder = new StringBuilder("https://los.colosim.com/?");
+
+		for (NPCSpawn spawn : spawns)
+		{
+			Point losPos = convertToLoSCoordinates(spawn.location);
+			Integer losNpcId = COLOSSEUM_WAVE_NPCS.get(spawn.npcId);
+
+			if (losNpcId != null)
+			{
+				String spawnCode = String.format("%02d%02d%d", losPos.getX(), losPos.getY(), losNpcId);
+				urlBuilder.append(spawnCode);
+
+				appendManticoreSuffixIfNeeded(urlBuilder, spawn);
+				urlBuilder.append(".");
+			}
+		}
+
+		// Add player position based on context and config
+		appendPlayerPositionIfNeeded(urlBuilder, context);
+
+		return urlBuilder.toString();
 	}
 
 	private void resetState()
