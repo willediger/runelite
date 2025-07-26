@@ -264,11 +264,6 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void updatePlayerLoSLocation(Player localPlayer)
 	{
-		if (localPlayer == null)
-		{
-			return;
-		}
-
 		WorldPoint worldLocation = localPlayer.getWorldLocation();
 		LocalPoint localPoint = LocalPoint.fromWorld(client, worldLocation);
 
