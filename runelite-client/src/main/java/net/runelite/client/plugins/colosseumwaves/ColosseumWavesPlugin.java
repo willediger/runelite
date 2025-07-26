@@ -111,6 +111,21 @@ public class ColosseumWavesPlugin extends Plugin
 	// Pattern to match "Wave: X" messages
 	private static final Pattern WAVE_PATTERN = Pattern.compile("Wave: (\\d+)");
 
+	// Timing constants for wave spawn detection
+	private static final int INITIAL_SPAWN_WINDOW_TICKS = 20;  // NPCs spawn within 20 ticks of wave start
+	private static final int REINFORCEMENT_THRESHOLD_TICKS = 50; // After 50 ticks, spawns are reinforcements
+
+	// Colosseum scene bounds
+	private static final int COLOSSEUM_MIN_SCENE_X = 35;
+	private static final int COLOSSEUM_MAX_SCENE_X = 62;
+	private static final int COLOSSEUM_MIN_SCENE_Y = 53;
+	private static final int COLOSSEUM_MAX_SCENE_Y = 82;
+
+	// LoS tool coordinate conversion
+	private static final int LOS_COORD_OFFSET_X = 32;
+	private static final int LOS_COORD_OFFSET_Y = 83;
+	private static final int LOS_COORD_MAX = 33;
+
 	private Point currentPlayerLoSLocation = null;
 	private Map<NPC, Point> npcLastPositions = new HashMap<>();
 	private List<NPCSpawn> waveSpawns = new ArrayList<>();
@@ -122,6 +137,14 @@ public class ColosseumWavesPlugin extends Plugin
 	private Map<NPC, NPCSpawn> activeNPCs = new HashMap<>();
 	private boolean isReinforcementWave = false;
 	private boolean expectingWaveSpawn = false;
+
+	// Enum for different LoS link contexts
+	private enum LoSContext
+	{
+		SPAWN,
+		REINFORCEMENTS,
+		CURRENT
+	}
 
 	// Helper class to store NPC spawn info
 	private static class NPCSpawn
@@ -325,21 +348,7 @@ public class ColosseumWavesPlugin extends Plugin
 			if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 			{
 				int currentTick = client.getTickCount();
-
-				// Determine if this is a wave spawn or reinforcement
-				if (expectingWaveSpawn && waveStartTick > 0 && (currentTick - waveStartTick) < 20)
-				{
-					expectingWaveSpawn = false;
-					isReinforcementWave = false;
-				}
-				else if (waveStartTick > 0 && (currentTick - waveStartTick) > 50)
-				{
-					if (!isReinforcementWave)
-					{
-						isReinforcementWave = true;
-					}
-				}
-
+				determineSpawnType(currentTick);
 				lastWaveSpawnTick = currentTick;
 
 				NPCSpawn spawn = new NPCSpawn(npc.getId(), npcLocation, npc.getName());
@@ -473,7 +482,7 @@ public class ColosseumWavesPlugin extends Plugin
 		int sceneY = worldLocalPoint.getSceneY();
 
 		// Check if the NPC is within the colosseum bounds
-		if (sceneX < 35 || sceneX > 62 || sceneY < 53 || sceneY > 82)
+		if (!isWithinColosseumBounds(sceneX, sceneY))
 		{
 			return null;
 		}
@@ -481,13 +490,27 @@ public class ColosseumWavesPlugin extends Plugin
 		return new Point(sceneX, sceneY);
 	}
 
+	/**
+	 * Checks if the given scene coordinates are within the Colosseum arena bounds.
+	 */
+	private boolean isWithinColosseumBounds(int sceneX, int sceneY)
+	{
+		return sceneX >= COLOSSEUM_MIN_SCENE_X && sceneX <= COLOSSEUM_MAX_SCENE_X
+			&& sceneY >= COLOSSEUM_MIN_SCENE_Y && sceneY <= COLOSSEUM_MAX_SCENE_Y;
+	}
+
+	/**
+	 * Converts scene coordinates to LoS tool coordinates.
+	 * The LoS tool uses a different coordinate system with (0,0) at the top-left.
+	 */
 	private Point convertToLoSCoordinates(Point sceneLocation)
 	{
-		int losX = sceneLocation.getX() - 32;
-		int losY = 83 - sceneLocation.getY();
+		int losX = sceneLocation.getX() - LOS_COORD_OFFSET_X;
+		int losY = LOS_COORD_OFFSET_Y - sceneLocation.getY();
 
-		losX = Math.max(0, Math.min(33, losX));
-		losY = Math.max(0, Math.min(33, losY));
+		// Clamp coordinates to valid LoS tool range
+		losX = Math.max(0, Math.min(LOS_COORD_MAX, losX));
+		losY = Math.max(0, Math.min(LOS_COORD_MAX, losY));
 
 		return new Point(losX, losY);
 	}
@@ -511,47 +534,14 @@ public class ColosseumWavesPlugin extends Plugin
 				String spawnCode = String.format("%02d%02d%d", losPos.getX(), losPos.getY(), losNpcId);
 				urlBuilder.append(spawnCode);
 
-				// Add suffix for manticores based on detected pattern
-				if (spawn.npcId == 12818)
-				{
-					char suffix = 'm'; // Default to mage-first
-
-					for (Map.Entry<NPC, NPCSpawn> entry : activeNPCs.entrySet())
-					{
-						NPCSpawn activeSpawn = entry.getValue();
-						if (activeSpawn.npcId == spawn.npcId &&
-							activeSpawn.location.equals(spawn.location) &&
-							manticoreHandler != null)
-						{
-							suffix = manticoreHandler.getManticoreLosSuffix(entry.getKey());
-							break;
-						}
-					}
-
-					urlBuilder.append(suffix);
-				}
-
+				appendManticoreSuffixIfNeeded(urlBuilder, spawn);
 				urlBuilder.append(".");
 			}
 		}
 
 		// Add player position based on config settings
-		boolean shouldAddPlayerPos = false;
-		if (isReinforcementWave && config.includePlayerLocationReinforcements())
-		{
-			shouldAddPlayerPos = true;
-		}
-		else if (!isReinforcementWave && config.includePlayerLocationSpawns())
-		{
-			shouldAddPlayerPos = true;
-		}
-
-		if (shouldAddPlayerPos && currentPlayerLoSLocation != null)
-		{
-			int playerEncoded = currentPlayerLoSLocation.getX() + (256 * currentPlayerLoSLocation.getY());
-			urlBuilder.append("#");
-			urlBuilder.append(playerEncoded);
-		}
+		LoSContext context = isReinforcementWave ? LoSContext.REINFORCEMENTS : LoSContext.SPAWN;
+		appendPlayerPositionIfNeeded(urlBuilder, context);
 
 		String url = urlBuilder.toString();
 
@@ -611,39 +601,110 @@ public class ColosseumWavesPlugin extends Plugin
 				String spawnCode = String.format("%02d%02d%d", losPos.getX(), losPos.getY(), losNpcId);
 				urlBuilder.append(spawnCode);
 
-				// Add suffix for manticores
-				if (spawn.npcId == 12818)
-				{
-					char suffix = 'm';
-
-					for (Map.Entry<NPC, NPCSpawn> entry : activeNPCs.entrySet())
-					{
-						NPCSpawn activeSpawn = entry.getValue();
-						if (activeSpawn.npcId == spawn.npcId &&
-							activeSpawn.location.equals(spawn.location) &&
-							manticoreHandler != null)
-						{
-							suffix = manticoreHandler.getManticoreLosSuffix(entry.getKey());
-							break;
-						}
-					}
-
-					urlBuilder.append(suffix);
-				}
-
+				appendManticoreSuffixIfNeeded(urlBuilder, spawn);
 				urlBuilder.append(".");
 			}
 		}
 
 		// Add player position based on config setting
-		if (config.includePlayerLocationCurrent() && currentPlayerLoSLocation != null)
-		{
-			int playerEncoded = currentPlayerLoSLocation.getX() + (256 * currentPlayerLoSLocation.getY());
-			urlBuilder.append("#");
-			urlBuilder.append(playerEncoded);
-		}
+		appendPlayerPositionIfNeeded(urlBuilder, LoSContext.CURRENT);
 
 		return urlBuilder.toString();
+	}
+
+	/**
+	 * Determines if the current NPC spawn is part of the initial wave or a reinforcement.
+	 * Initial wave spawns occur within INITIAL_SPAWN_WINDOW_TICKS of the wave start.
+	 * Reinforcements spawn after REINFORCEMENT_THRESHOLD_TICKS.
+	 */
+	private void determineSpawnType(int currentTick)
+	{
+		if (waveStartTick <= 0)
+		{
+			return;
+		}
+
+		int ticksSinceWaveStart = currentTick - waveStartTick;
+
+		// First spawn within the initial window - this is a wave spawn
+		if (expectingWaveSpawn && ticksSinceWaveStart < INITIAL_SPAWN_WINDOW_TICKS)
+		{
+			expectingWaveSpawn = false;
+			isReinforcementWave = false;
+			log.debug("Initial wave spawn detected at {} ticks after wave start", ticksSinceWaveStart);
+		}
+		// Spawns after the reinforcement threshold are reinforcements
+		else if (ticksSinceWaveStart > REINFORCEMENT_THRESHOLD_TICKS && !isReinforcementWave)
+		{
+			isReinforcementWave = true;
+			log.debug("Reinforcement spawn detected at {} ticks after wave start", ticksSinceWaveStart);
+		}
+	}
+
+	/**
+	 * Determines whether to include player position in the LoS link based on
+	 * the current context and config settings.
+	 * 
+	 * @param context the context for which the LoS link is being generated
+	 */
+	private boolean shouldIncludePlayerPosition(LoSContext context)
+	{
+		switch (context)
+		{
+			case SPAWN:
+				return config.includePlayerLocationSpawns();
+			case REINFORCEMENTS:
+				return config.includePlayerLocationReinforcements();
+			case CURRENT:
+				return config.includePlayerLocationCurrent();
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Appends the player position to the URL if configured and available.
+	 * Player position is encoded as a single integer: x + (256 * y)
+	 * 
+	 * @param urlBuilder the StringBuilder to append to
+	 * @param context the context for which the LoS link is being generated
+	 */
+	private void appendPlayerPositionIfNeeded(StringBuilder urlBuilder, LoSContext context)
+	{
+		if (shouldIncludePlayerPosition(context) && currentPlayerLoSLocation != null)
+		{
+			int playerEncoded = currentPlayerLoSLocation.getX() + (256 * currentPlayerLoSLocation.getY());
+			urlBuilder.append("#").append(playerEncoded);
+		}
+	}
+
+	/**
+	 * Appends the appropriate suffix for manticore NPCs based on their attack pattern.
+	 * Manticores need a suffix to indicate whether they start with magic or ranged attacks.
+	 */
+	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NPCSpawn spawn)
+	{
+		if (spawn.npcId != 12818) // Not a manticore
+		{
+			return;
+		}
+
+		char suffix = 'm'; // Default to mage-first
+
+		// Find the corresponding NPC to get its attack pattern
+		for (Map.Entry<NPC, NPCSpawn> entry : activeNPCs.entrySet())
+		{
+			NPCSpawn activeSpawn = entry.getValue();
+			if (activeSpawn.npcId == spawn.npcId &&
+				activeSpawn.location.equals(spawn.location) &&
+				manticoreHandler != null)
+			{
+				suffix = manticoreHandler.getManticoreLosSuffix(entry.getKey());
+				break;
+			}
+		}
+
+		urlBuilder.append(suffix);
 	}
 
 	private void resetState()
