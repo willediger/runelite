@@ -39,9 +39,9 @@ public class ManticoreHandler
 
 	private static final int MANTICORE_NPC_ID = 12818;
 
-	private static final int MAGIC_ORB = 2681;
-	private static final int RANGED_ORB = 2683;
-	private static final int MELEE_ORB = 2685;
+	private static final int MAGIC_ORB_GRAPHIC_ID = 2681;
+	private static final int RANGED_ORB_GRAPHIC_ID = 2683;
+	private static final int MELEE_ORB_GRAPHIC_ID = 2685;
 
 	public ManticoreHandler(Client client, ColosseumWavesPlugin plugin)
 	{
@@ -49,40 +49,40 @@ public class ManticoreHandler
 		this.plugin = plugin;
 	}
 
-	private final Map<NPC, MData> manticores = new HashMap<>();
+	private final Map<NPC, ManticoreData> manticores = new HashMap<>();
 
 	private final Map<NPC, List<Integer>> orbSequences = new HashMap<>();
 
-	private enum AType
+	private enum AttackType
 	{
 		MAGIC('m'), RANGED('r');
-		final char suf;
+		final char losSuffix;
 
-		AType(char c)
+		AttackType(char suffix)
 		{
-			suf = c;
+			losSuffix = suffix;
 		}
 	}
 
-	private static class MData
+	private static class ManticoreData
 	{
-		AType first = null;
+		AttackType firstAttack = null;
 
-		char suf()
+		char getLosSuffix()
 		{
-			return first == AType.RANGED ? 'r' : 'm';
+			return firstAttack == AttackType.RANGED ? 'r' : 'm';
 		}
 
-		boolean known()
+		boolean isPatternKnown()
 		{
-			return first != null;
+			return firstAttack != null;
 		}
 	}
 
-	public char getManticoreLosSuffix(NPC n)
+	public char getManticoreLosSuffix(NPC npc)
 	{
-		MData d = manticores.get(n);
-		return d != null ? d.suf() : 'm';
+		ManticoreData data = manticores.get(npc);
+		return data != null ? data.getLosSuffix() : 'm';
 	}
 
 	public void clear()
@@ -91,19 +91,19 @@ public class ManticoreHandler
 		orbSequences.clear();
 	}
 
-	public void onNpcSpawned(NPC n)
+	public void onNpcSpawned(NPC npc)
 	{
-		if (n.getId() == MANTICORE_NPC_ID)
+		if (npc.getId() == MANTICORE_NPC_ID)
 		{
-			manticores.put(n, new MData());
-			orbSequences.put(n, new ArrayList<>());
+			manticores.put(npc, new ManticoreData());
+			orbSequences.put(npc, new ArrayList<>());
 		}
 	}
 
-	public void onNpcDespawned(NPC n)
+	public void onNpcDespawned(NPC npc)
 	{
-		manticores.remove(n);
-		orbSequences.remove(n);
+		manticores.remove(npc);
+		orbSequences.remove(npc);
 	}
 
 	public void checkNPCGraphics(NPC npc)
@@ -119,9 +119,9 @@ public class ManticoreHandler
 			return;
 		}
 
-		if (graphic == MAGIC_ORB || graphic == RANGED_ORB || graphic == MELEE_ORB)
+		if (graphic == MAGIC_ORB_GRAPHIC_ID || graphic == RANGED_ORB_GRAPHIC_ID || graphic == MELEE_ORB_GRAPHIC_ID)
 		{
-			MData data = manticores.get(npc);
+			ManticoreData data = manticores.get(npc);
 			if (data == null)
 			{
 				return;
@@ -137,15 +137,15 @@ public class ManticoreHandler
 			{
 				sequence.add(graphic);
 
-				if (sequence.size() == 1 && data.first == null)
+				if (sequence.size() == 1 && data.firstAttack == null)
 				{
-					if (graphic == MAGIC_ORB)
+					if (graphic == MAGIC_ORB_GRAPHIC_ID)
 					{
-						data.first = AType.MAGIC;
+						data.firstAttack = AttackType.MAGIC;
 					}
-					else if (graphic == RANGED_ORB)
+					else if (graphic == RANGED_ORB_GRAPHIC_ID)
 					{
-						data.first = AType.RANGED;
+						data.firstAttack = AttackType.RANGED;
 					}
 				}
 
