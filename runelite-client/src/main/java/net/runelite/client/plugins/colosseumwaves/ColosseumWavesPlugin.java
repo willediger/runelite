@@ -53,6 +53,7 @@ import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GraphicChanged;
+import net.runelite.api.gameval.NpcID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -101,13 +102,13 @@ public class ColosseumWavesPlugin extends Plugin
 	// Colosseum wave NPCs with their LoS tool ID mapping
 	private static final Map<Integer, Integer> COLOSSEUM_WAVE_NPCS =
 		ImmutableMap.<Integer, Integer>builder()
-			.put(12811, 1) // Serpent shaman
-			.put(12817, 2) // Javelin Colossus
-			.put(12810, 3) // Jaguar warrior
-			.put(12818, 4) // Manticore
-			.put(12812, 5) // Minotaur
-			.put(12813, 5) // Minotaur (Red Flag)
-			.put(12819, 6) // Shockwave Colossus
+			.put(NpcID.COLOSSEUM_STANDARD_MAGER, 1) // Serpent shaman
+			.put(NpcID.COLOSSEUM_JAVELIN_COLOSSUS, 2) // Javelin Colossus
+			.put(NpcID.COLOSSEUM_JAGUAR_WARRIOR, 3) // Jaguar warrior
+			.put(NpcID.COLOSSEUM_MANTICORE, 4) // Manticore
+			.put(NpcID.COLOSSEUM_MINOTAUR, 5) // Minotaur
+			.put(NpcID.COLOSSEUM_MINOTAUR_ROUTEFIND, 5) // Minotaur (Red Flag)
+			.put(NpcID.COLOSSEUM_SHOCKWAVE_COLOSSUS, 6) // Shockwave Colossus
 			.build();
 
 	// Pattern to match "Wave: X" messages

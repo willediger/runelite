@@ -26,6 +26,8 @@ package net.runelite.client.plugins.colosseumwaves;
 
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
+import net.runelite.api.gameval.SpotanimID;
+import net.runelite.api.gameval.NpcID;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
@@ -41,11 +43,11 @@ public class ManticoreHandler
 	@Inject
 	private Client client;
 
-	private static final int MANTICORE_NPC_ID = 12818;
+	private static final int MANTICORE_NPC_ID = NpcID.COLOSSEUM_MANTICORE;
 
-	private static final int MAGIC_ORB_GRAPHIC_ID = 2681;
-	private static final int RANGED_ORB_GRAPHIC_ID = 2683;
-	private static final int MELEE_ORB_GRAPHIC_ID = 2685;
+	private static final int MAGIC_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_MAGIC_01;
+	private static final int RANGED_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_RANGED_01;
+	private static final int MELEE_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_MELEE_01;
 
 	private final Map<NPC, ManticoreData> manticores = new HashMap<>();
 
