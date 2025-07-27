@@ -177,10 +177,7 @@ public class ColosseumWavesPlugin extends Plugin
 	@Override
 	protected void shutDown() throws Exception
 	{
-		if (manticoreHandler != null)
-		{
-			manticoreHandler.clear();
-		}
+		manticoreHandler.clear();
 
 		clientToolbar.removeNavigation(navButton);
 		panel = null;
@@ -328,7 +325,7 @@ public class ColosseumWavesPlugin extends Plugin
 		NPC npc = event.getNpc();
 
 		// Track manticores
-		if (manticoreHandler != null && isManticore(npc))
+		if (isManticore(npc))
 		{
 			manticoreHandler.onNpcSpawned(npc);
 		}
@@ -368,7 +365,7 @@ public class ColosseumWavesPlugin extends Plugin
 	@Subscribe
 	public void onNpcDespawned(NpcDespawned event)
 	{
-		if (!inColosseum || manticoreHandler == null)
+		if (!inColosseum)
 		{
 			return;
 		}
@@ -385,7 +382,7 @@ public class ColosseumWavesPlugin extends Plugin
 	@Subscribe
 	public void onGraphicChanged(GraphicChanged event)
 	{
-		if (!inColosseum || manticoreHandler == null)
+		if (!inColosseum)
 		{
 			return;
 		}
@@ -558,7 +555,7 @@ public class ColosseumWavesPlugin extends Plugin
 		char suffix = 'u'; // Default to uncharged
 
 		// Use the stored NPC instance to get its attack pattern
-		if (spawn.npcInstance != null && manticoreHandler != null)
+		if (spawn.npcInstance != null)
 		{
 			suffix = manticoreHandler.getManticoreLosSuffix(spawn.npcInstance);
 		}
