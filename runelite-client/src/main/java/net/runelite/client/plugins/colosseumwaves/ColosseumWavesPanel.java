@@ -52,14 +52,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ColosseumWavesPanel extends PluginPanel
 {
-	private static final int componentHeight = 30;
-	private static final int gapSize = 5;
+	private static final int COMPONENT_HEIGHT = 30;
+	private static final int GAP = 5;
 	private static final int waveNumberWidth = 42;
 	private static final int spawnButtonWidth = 62;
 	private static final int reinforcementsButtonWidth = 118;
-	private static final Color bgColor = ColorScheme.DARK_GRAY_COLOR;
-	private static final Color buttonColor = ColorScheme.DARKER_GRAY_COLOR;
-	private static final Color hoverColor = new Color(52, 52, 52);
+	private static final Dimension FULL_WIDTH = new Dimension(Integer.MAX_VALUE, COMPONENT_HEIGHT);
+	private static final Color BG_COLOR = ColorScheme.DARK_GRAY_COLOR;
+	private static final Color BTN_COLOR = ColorScheme.DARKER_GRAY_COLOR;
+	private static final Color HOVER_COLOR = new Color(52, 52, 52);
 
 	private final ColosseumWavesPlugin plugin;
 	private final ClientThread clientThread;
@@ -74,53 +75,40 @@ public class ColosseumWavesPanel extends PluginPanel
 		this.plugin = plugin;
 		this.clientThread = clientThread;
 
-		setBackground(bgColor);
+		setBackground(BG_COLOR);
 		setLayout(new BorderLayout());
 
-		// Header - "Current LoS" button + static "Waves" header
 		JPanel header = new JPanel();
 		header.setOpaque(false);
 		header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-		header.setBorder(new EmptyBorder(gapSize, gapSize, gapSize, gapSize));
+		header.setBorder(new EmptyBorder(GAP, GAP, GAP, GAP));
 
-		JButton currentLoS = buildHeaderButton("Current LoS", buttonColor, hoverColor);
-		currentLoS.addActionListener(e ->
+		JButton currentLoS = createButton("Current LoS", FULL_WIDTH);
+		currentLoS.addActionListener(e -> clientThread.invokeLater(() ->
 		{
-			// Run on client thread to ensure we can access game state
-			clientThread.invokeLater(() ->
+			String url = plugin.generateCurrentLoSLink();
+			if (url != null)
 			{
-				String url = plugin.generateCurrentLoSLink();
-				SwingUtilities.invokeLater(() ->
-				{
-					if (url != null)
-					{
-						LinkBrowser.browse(url);
-					}
-				});
-			});
-		});
+				SwingUtilities.invokeLater(() -> LinkBrowser.browse(url));
+			}
+		}));
 
-		JLabel wavesLabel = new JLabel("Waves", SwingConstants.CENTER);
-		wavesLabel.setOpaque(true);
-		wavesLabel.setBackground(buttonColor);
-		wavesLabel.setForeground(Color.WHITE);
-		wavesLabel.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
-		wavesLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+		JLabel wavesLabel = createLabel("Waves");
+		setFixedSize(wavesLabel, FULL_WIDTH);
 
 		header.add(currentLoS);
-		header.add(Box.createRigidArea(new Dimension(0, gapSize)));
+		header.add(Box.createRigidArea(new Dimension(0, GAP)));
 		header.add(wavesLabel);
 
 		add(header, BorderLayout.NORTH);
 
 		wavesContainer = new JPanel();
 		wavesContainer.setLayout(new BoxLayout(wavesContainer, BoxLayout.Y_AXIS));
-		wavesContainer.setBackground(bgColor);
+		wavesContainer.setBackground(BG_COLOR);
 
 		JPanel wrapper = new JPanel(new BorderLayout());
-		wrapper.setBackground(bgColor);
+		wrapper.setBackground(BG_COLOR);
 		wrapper.add(wavesContainer, BorderLayout.NORTH);
-
 		add(wrapper, BorderLayout.CENTER);
 	}
 
@@ -131,29 +119,28 @@ public class ColosseumWavesPanel extends PluginPanel
 			WavePanel panel = new WavePanel(waveNumber);
 			wavePanels.add(panel);
 			wavesContainer.add(panel);
-			wavesContainer.add(Box.createRigidArea(new Dimension(0, gapSize)));
+			wavesContainer.add(Box.createRigidArea(new Dimension(0, GAP)));
 			wavesContainer.revalidate();
 		});
 	}
 
 	public void setWaveSpawnUrl(int waveNumber, String url)
 	{
-		SwingUtilities.invokeLater(() ->
-		{
-			if (waveNumber > 0 && waveNumber <= wavePanels.size())
-			{
-				wavePanels.get(waveNumber - 1).setSpawnUrl(url);
-			}
-		});
+		runOnWavePanel(waveNumber, panel -> panel.setSpawnUrl(url));
 	}
 
 	public void setWaveReinforcementUrl(int waveNumber, String url)
+	{
+		runOnWavePanel(waveNumber, panel -> panel.setReinforcementUrl(url));
+	}
+
+	private void runOnWavePanel(int waveNumber, java.util.function.Consumer<WavePanel> action)
 	{
 		SwingUtilities.invokeLater(() ->
 		{
 			if (waveNumber > 0 && waveNumber <= wavePanels.size())
 			{
-				wavePanels.get(waveNumber - 1).setReinforcementUrl(url);
+				action.accept(wavePanels.get(waveNumber - 1));
 			}
 		});
 	}
@@ -168,9 +155,13 @@ public class ColosseumWavesPanel extends PluginPanel
 		});
 	}
 
-	private static JButton buildHeaderButton(String text, Color bg, Color hover)
+	private static JLabel createLabel(String text)
 	{
-		return createStyledButton(text, bg, hover, new Dimension(Integer.MAX_VALUE, componentHeight));
+		JLabel label = new JLabel(text, SwingConstants.CENTER);
+		label.setOpaque(true);
+		label.setBackground(BTN_COLOR);
+		label.setForeground(Color.WHITE);
+		return label;
 	}
 
 	private static class WavePanel extends JPanel
@@ -183,34 +174,27 @@ public class ColosseumWavesPanel extends PluginPanel
 		{
 			setOpaque(false);
 			setLayout(new BorderLayout());
-
-			setBorder(new EmptyBorder(0, gapSize, 0, gapSize));
+			setBorder(new EmptyBorder(0, GAP, 0, GAP));
 
 			JPanel row = new JPanel();
 			row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
 			row.setOpaque(false);
-			row.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
-			row.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
+			setFixedSize(row, FULL_WIDTH);
 
-			// Wave number label
-			numberLabel = buildCellLabel(String.valueOf(wave));
-			setFixedSize(numberLabel, waveNumberWidth, componentHeight);
-			row.add(numberLabel);
-			row.add(Box.createRigidArea(new Dimension(gapSize, 0)));
+			numberLabel = createLabel(String.valueOf(wave));
+			setFixedSize(numberLabel, waveNumberWidth, COMPONENT_HEIGHT);
 
-			// Spawn button
-			spawnButton = buildCellButton("Spawn");
-			setFixedSize(spawnButton, spawnButtonWidth, componentHeight);
+			spawnButton = createButton("Spawn", new Dimension(spawnButtonWidth, COMPONENT_HEIGHT));
 			spawnButton.setEnabled(false);
-			row.add(spawnButton);
-			row.add(Box.createRigidArea(new Dimension(gapSize, 0)));
 
-			// Reinforcements button
-			reinfButton = buildCellButton("Reinforcements");
-			setFixedSize(reinfButton, reinforcementsButtonWidth, componentHeight);
-			reinfButton.setHorizontalAlignment(SwingConstants.CENTER);
+			reinfButton = createButton("Reinforcements", new Dimension(reinforcementsButtonWidth, COMPONENT_HEIGHT));
 			reinfButton.setEnabled(false);
 			reinfButton.setVisible(false);
+
+			row.add(numberLabel);
+			row.add(Box.createRigidArea(new Dimension(GAP, 0)));
+			row.add(spawnButton);
+			row.add(Box.createRigidArea(new Dimension(GAP, 0)));
 			row.add(reinfButton);
 
 			add(row, BorderLayout.CENTER);
@@ -228,21 +212,6 @@ public class ColosseumWavesPanel extends PluginPanel
 			enableButton(reinfButton, url);
 		}
 
-		private static JLabel buildCellLabel(String txt)
-		{
-			JLabel l = new JLabel(txt, SwingConstants.CENTER);
-			l.setOpaque(true);
-			l.setBackground(buttonColor);
-			l.setForeground(Color.WHITE);
-			l.setPreferredSize(new Dimension(Integer.MAX_VALUE, componentHeight));
-			l.setMaximumSize(new Dimension(Integer.MAX_VALUE, componentHeight));
-			return l;
-		}
-
-		private static JButton buildCellButton(String txt)
-		{
-			return createStyledButton(txt, buttonColor, hoverColor, new Dimension(Integer.MAX_VALUE, componentHeight));
-		}
 
 		private static void enableButton(JButton b, String url)
 		{
@@ -252,22 +221,17 @@ public class ColosseumWavesPanel extends PluginPanel
 			}
 			b.addActionListener(e -> LinkBrowser.browse(url));
 			b.setEnabled(true);
-			b.setForeground(Color.WHITE);
 		}
 	}
 
-	/**
-	 * Creates a styled button with hover effects.
-	 * Consolidates common button creation logic to avoid duplication.
-	 */
-	private static JButton createStyledButton(String text, Color bgColor, Color hoverColor, Dimension size)
+	private static JButton createButton(String text, Dimension size)
 	{
 		JButton button = new JButton(text);
 		button.setFocusPainted(false);
-		button.setBackground(bgColor);
+		button.setBackground(BTN_COLOR);
 		button.setForeground(Color.WHITE);
 		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		setFixedSize(button, size.width, size.height);
+		setFixedSize(button, size);
 		button.setBorder(BorderFactory.createEmptyBorder());
 
 		button.addMouseListener(new MouseAdapter()
@@ -275,29 +239,28 @@ public class ColosseumWavesPanel extends PluginPanel
 			@Override
 			public void mouseEntered(MouseEvent e)
 			{
-				button.setBackground(hoverColor);
+				button.setBackground(HOVER_COLOR);
 			}
 
 			@Override
 			public void mouseExited(MouseEvent e)
 			{
-				button.setBackground(bgColor);
+				button.setBackground(BTN_COLOR);
 			}
 		});
 
 		return button;
 	}
 
-	/**
-	 * Sets a fixed size for a component (preferred, maximum, and minimum).
-	 * Consolidates repetitive size setting code.
-	 */
-	private static void setFixedSize(JComponent component, int width, int height)
+	private static void setFixedSize(JComponent component, Dimension size)
 	{
-		Dimension size = new Dimension(width, height);
 		component.setPreferredSize(size);
 		component.setMaximumSize(size);
 		component.setMinimumSize(size);
 	}
 
+	private static void setFixedSize(JComponent component, int width, int height)
+	{
+		setFixedSize(component, new Dimension(width, height));
+	}
 }
