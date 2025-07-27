@@ -29,11 +29,9 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import javax.inject.Inject;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -88,15 +86,6 @@ public class ColosseumWavesPlugin extends Plugin
 
 	// Fortis Colosseum region ID
 	private static final int COLOSSEUM_REGION_ID = 7216;
-
-	// NPCs to exclude from tracking
-	private static final Set<Integer> EXCLUDED_NPC_IDS = ImmutableSet.of(
-		NpcID.COLOSSEUM_MASTER, // Minimus
-		NpcID.COLOSSEUM_BOSS_SEATED, // Sol Heredit
-		NpcID.COLOSSEUM_WARBANDER_MELEE_MALE, // Fremennik warband berserker
-		NpcID.COLOSSEUM_WARBANDER_RANGED_FEMALE, // Fremennik warband archer
-		NpcID.COLOSSEUM_WARBANDER_MAGE_MALE // Fremennik warband seer
-	);
 
 	// Colosseum wave NPCs with their LoS tool ID mapping
 	private static final Map<Integer, Integer> COLOSSEUM_WAVE_NPCS =
