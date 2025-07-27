@@ -222,7 +222,6 @@ public class ColosseumWavesPlugin extends Plugin
 			waveComplete = false;
 			isReinforcementWave = false;
 			hasProcessedReinforcements = false;
-			log.debug("wave: {}, tick: {}", newWave, waveStartTick);
 		}
 	}
 
@@ -355,7 +354,6 @@ public class ColosseumWavesPlugin extends Plugin
 				if (!isReinforcementWave)
 				{
 					waveSpawns.add(spawn);
-					log.debug("Added {} to wave spawns at position {}", npc.getName(), npcLocation);
 				}
 				else
 				{
@@ -402,20 +400,15 @@ public class ColosseumWavesPlugin extends Plugin
 				manticoreHandler.checkNPCGraphics(npc);
 				boolean isNowCharged = !manticoreHandler.isManticoreUncharged(npc);
 
-				log.debug("Manticore graphic changed - wasUncharged: {}, isNowCharged: {}, currentWave: {}, isReinforcement: {}",
-					wasUncharged, isNowCharged, currentWave, isReinforcementWave);
-
 				// If manticore just became charged, update the appropriate URL(s)
 				if (wasUncharged && isNowCharged && currentWave > 0)
 				{
 					// Always update spawn URL
-					log.debug("Updating spawn URL for wave {}", currentWave);
 					updateSpawnUrlForCurrentWave();
 
 					// If we've already processed reinforcements, also update reinforcement URL
 					if (hasProcessedReinforcements)
 					{
-						log.debug("Also updating reinforcement URL for wave {} (hasProcessedReinforcements=true)", currentWave);
 						updateReinforcementUrlForCurrentWave();
 					}
 				}
@@ -487,7 +480,6 @@ public class ColosseumWavesPlugin extends Plugin
 				String url = buildLoSUrl(reinforcementSpawns, config.includePlayerLocationReinforcements(), playerLocationAtReinforcements);
 				panel.setWaveReinforcementUrl(currentWave, url);
 				hasProcessedReinforcements = true;
-				log.debug("Set hasProcessedReinforcements=true for wave {}", currentWave);
 			}
 		}
 		else
@@ -509,7 +501,6 @@ public class ColosseumWavesPlugin extends Plugin
 		// Reset reinforcement flag after processing
 		if (isReinforcementWave)
 		{
-			log.debug("Resetting isReinforcementWave flag after processing");
 			isReinforcementWave = false;
 		}
 	}
@@ -532,7 +523,6 @@ public class ColosseumWavesPlugin extends Plugin
 		// For current LoS, get player's current position
 		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLoSLocation() : null;
 		String url = buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
-		log.debug("Current LoS URL: {}", url);
 		return url;
 	}
 
@@ -550,13 +540,11 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			expectingWaveSpawn = false;
 			isReinforcementWave = false;
-			log.debug("Initial wave spawn detected at {} ticks after wave start", ticksSinceWaveStart);
 		}
 		// Spawns after the reinforcement threshold are reinforcements
 		else if (ticksSinceWaveStart > REINFORCEMENT_THRESHOLD_TICKS && !isReinforcementWave)
 		{
 			isReinforcementWave = true;
-			log.debug("Setting isReinforcementWave=true at {} ticks after wave start", ticksSinceWaveStart);
 		}
 	}
 
@@ -616,7 +604,6 @@ public class ColosseumWavesPlugin extends Plugin
 			// Use the stored player location from when wave spawned
 			String url = buildLoSUrl(waveSpawns, config.includePlayerLocationSpawns(), playerLocationAtWaveSpawn);
 			panel.setWaveSpawnUrl(currentWave, url);
-			log.debug("Updated spawn URL for wave {}: {}", currentWave, url);
 		}
 	}
 
@@ -628,7 +615,6 @@ public class ColosseumWavesPlugin extends Plugin
 			// Use the stored player location from when reinforcements spawned
 			String url = buildLoSUrl(reinforcementSpawns, config.includePlayerLocationReinforcements(), playerLocationAtReinforcements);
 			panel.setWaveReinforcementUrl(currentWave, url);
-			log.debug("Updated reinforcement URL for wave {}: {}", currentWave, url);
 		}
 	}
 

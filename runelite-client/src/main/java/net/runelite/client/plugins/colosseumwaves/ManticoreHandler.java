@@ -141,12 +141,10 @@ public class ManticoreHandler
 					if (graphic == MAGIC_ORB_GRAPHIC_ID)
 					{
 						data.firstAttack = AttackType.MAGIC;
-						log.debug("Manticore detected as MAGIC first");
 					}
 					else if (graphic == RANGED_ORB_GRAPHIC_ID)
 					{
 						data.firstAttack = AttackType.RANGED;
-						log.debug("Manticore detected as RANGED first");
 					}
 				}
 
