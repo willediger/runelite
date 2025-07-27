@@ -123,16 +123,9 @@ public class ColosseumWavesPlugin extends Plugin
 	private static final int INITIAL_SPAWN_WINDOW_TICKS = 20;  // NPCs spawn within 20 ticks of wave start
 	private static final int REINFORCEMENT_THRESHOLD_TICKS = 50; // After 50 ticks, spawns are reinforcements
 
-	// Colosseum scene bounds
-	private static final int COLOSSEUM_MIN_SCENE_X = 35;
-	private static final int COLOSSEUM_MAX_SCENE_X = 62;
-	private static final int COLOSSEUM_MIN_SCENE_Y = 53;
-	private static final int COLOSSEUM_MAX_SCENE_Y = 82;
-
 	// LoS tool coordinate conversion
 	private static final int LOS_COORD_OFFSET_X = 32;
 	private static final int LOS_COORD_OFFSET_Y = 83;
-	private static final int LOS_COORD_MAX = 33;
 
 	// State tracking
 	private boolean inColosseum = false;
@@ -140,7 +133,7 @@ public class ColosseumWavesPlugin extends Plugin
 	private boolean waveComplete = false;
 	private boolean isReinforcementWave = false;
 	private boolean expectingWaveSpawn = false;
-	private boolean hasProcessedReinforcements = false; // Track if we've already processed reinforcements
+	private boolean hasProcessedReinforcements = false;
 
 	// Timing
 	private int waveStartTick = 0;
@@ -509,29 +502,13 @@ public class ColosseumWavesPlugin extends Plugin
 		int sceneX = worldLocalPoint.getSceneX();
 		int sceneY = worldLocalPoint.getSceneY();
 
-		// Check if the NPC is within the colosseum bounds
-		if (!isWithinColosseumBounds(sceneX, sceneY))
-		{
-			return null;
-		}
-
 		return new Point(sceneX, sceneY);
-	}
-
-	private boolean isWithinColosseumBounds(int sceneX, int sceneY)
-	{
-		return sceneX >= COLOSSEUM_MIN_SCENE_X && sceneX <= COLOSSEUM_MAX_SCENE_X
-			&& sceneY >= COLOSSEUM_MIN_SCENE_Y && sceneY <= COLOSSEUM_MAX_SCENE_Y;
 	}
 
 	private Point convertToLoSCoordinates(Point sceneLocation)
 	{
 		int losX = sceneLocation.getX() - LOS_COORD_OFFSET_X;
 		int losY = LOS_COORD_OFFSET_Y - sceneLocation.getY();
-
-		// Clamp coordinates to valid LoS tool range
-		losX = Math.max(0, Math.min(LOS_COORD_MAX, losX));
-		losY = Math.max(0, Math.min(LOS_COORD_MAX, losY));
 
 		return new Point(losX, losY);
 	}
