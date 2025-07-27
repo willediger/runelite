@@ -202,13 +202,10 @@ public class ColosseumWavesPlugin extends Plugin
 
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
-	{
-		if (inColosseum && event.getGameState() == GameState.LOGGED_IN)
+	{ // if the plugin thinks we're in the colosseum but we're not, reset state
+		if (inColosseum && event.getGameState() == GameState.LOGGED_IN && !isInColosseum())
 		{
-			if (!isInColosseum())
-			{
-				resetState();
-			}
+			resetState();
 		}
 	}
 
@@ -317,11 +314,10 @@ public class ColosseumWavesPlugin extends Plugin
 				int currentTick = client.getTickCount();
 				determineSpawnType(currentTick);
 
-				NPCSpawn spawn = new NPCSpawn(npc.getId(), npcLocation, npc);
-
 				if (!isReinforcementWave)
 				{
-					waveSpawns.add(spawn);
+					waveSpawns.clear();
+					waveSpawns.addAll(collectActiveColosseumNPCs());
 				}
 				else
 				{
@@ -369,7 +365,7 @@ public class ColosseumWavesPlugin extends Plugin
 				boolean isNowCharged = !manticoreHandler.isManticoreUncharged(npc);
 
 				// If manticore just became charged, update the appropriate URL(s)
-				if (wasUncharged && isNowCharged && currentWave > 0)
+				if (wasUncharged && isNowCharged)
 				{
 					// Always update spawn URL
 					updateSpawnUrlForCurrentWave();
@@ -409,11 +405,6 @@ public class ColosseumWavesPlugin extends Plugin
 		WorldPoint worldPoint = npc.getWorldLocation();
 		LocalPoint worldLocalPoint = LocalPoint.fromWorld(client, worldPoint);
 
-		if (worldLocalPoint == null)
-		{
-			return null;
-		}
-
 		int sceneX = worldLocalPoint.getSceneX();
 		int sceneY = worldLocalPoint.getSceneY();
 
@@ -430,11 +421,6 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void handleWaveSpawnsAndReinforcements()
 	{
-		if (panel == null || currentWave <= 0)
-		{
-			return;
-		}
-
 		if (isReinforcementWave)
 		{
 			// Handle reinforcements
