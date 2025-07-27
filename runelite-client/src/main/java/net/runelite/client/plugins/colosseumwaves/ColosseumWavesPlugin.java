@@ -655,7 +655,6 @@ public class ColosseumWavesPlugin extends Plugin
 		if (panel != null && currentWave > 0 && !waveSpawns.isEmpty())
 		{
 			// Rebuild the spawn URL with updated manticore suffixes
-			// DO NOT recapture positions - keep original spawn locations
 			String url = buildLoSUrl(waveSpawns, config.includePlayerLocationSpawns());
 			panel.setWaveSpawnUrl(currentWave, url);
 			log.debug("Updated spawn URL for wave {}: {}", currentWave, url);
@@ -667,7 +666,6 @@ public class ColosseumWavesPlugin extends Plugin
 		if (panel != null && currentWave > 0 && !reinforcementSpawns.isEmpty())
 		{
 			// Rebuild the reinforcement URL with updated manticore suffixes
-			// Use reinforcement positions, not spawn positions
 			String url = buildLoSUrl(reinforcementSpawns, config.includePlayerLocationReinforcements());
 			panel.setWaveReinforcementUrl(currentWave, url);
 			log.debug("Updated reinforcement URL for wave {}: {}", currentWave, url);
