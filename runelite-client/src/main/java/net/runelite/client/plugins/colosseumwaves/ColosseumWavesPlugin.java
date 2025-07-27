@@ -550,7 +550,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NPCSpawn spawn)
 	{
-		if (spawn.npcId != 12818) // Not a manticore
+		if (!isManticore(spawn.npcInstance))
 		{
 			return;
 		}
@@ -600,7 +600,6 @@ public class ColosseumWavesPlugin extends Plugin
 		if (panel != null && currentWave > 0 && !waveSpawns.isEmpty())
 		{
 			// Rebuild the spawn URL with updated manticore suffixes
-			// Use the stored player location from when wave spawned
 			String url = buildLoSUrl(waveSpawns, config.includePlayerLocationSpawns(), playerLocationAtWaveSpawn);
 			panel.setWaveSpawnUrl(currentWave, url);
 		}
@@ -611,7 +610,6 @@ public class ColosseumWavesPlugin extends Plugin
 		if (panel != null && currentWave > 0 && !reinforcementSpawns.isEmpty())
 		{
 			// Rebuild the reinforcement URL with updated manticore suffixes
-			// Use the stored player location from when reinforcements spawned
 			String url = buildLoSUrl(reinforcementSpawns, config.includePlayerLocationReinforcements(), playerLocationAtReinforcements);
 			panel.setWaveReinforcementUrl(currentWave, url);
 		}
