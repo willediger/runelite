@@ -61,7 +61,6 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
-import org.apache.commons.lang3.ArrayUtils;
 
 @PluginDescriptor(
 	name = "Colosseum Waves",
@@ -301,7 +300,18 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private boolean isInColosseum()
 	{
-		return ArrayUtils.contains(client.getMapRegions(), COLOSSEUM_REGION_ID);
+		int[] mapRegions = client.getMapRegions();
+		if (mapRegions != null)
+		{
+			for (int region : mapRegions)
+			{
+				if (region == COLOSSEUM_REGION_ID)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	private boolean isManticore(NPC npc)
