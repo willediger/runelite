@@ -304,6 +304,11 @@ public class ColosseumWavesPlugin extends Plugin
 		return ArrayUtils.contains(client.getMapRegions(), COLOSSEUM_REGION_ID);
 	}
 
+	private boolean isManticore(NPC npc)
+	{
+		return npc != null && npc.getId() == NpcID.COLOSSEUM_MANTICORE;
+	}
+
 	@Subscribe
 	public void onNpcSpawned(NpcSpawned event)
 	{
@@ -315,7 +320,7 @@ public class ColosseumWavesPlugin extends Plugin
 		NPC npc = event.getNpc();
 
 		// Track manticores
-		if (manticoreHandler != null)
+		if (manticoreHandler != null && isManticore(npc))
 		{
 			manticoreHandler.onNpcSpawned(npc);
 		}
@@ -367,7 +372,10 @@ public class ColosseumWavesPlugin extends Plugin
 
 		// Only track manticore despawn for suffix tracking
 		NPC npc = event.getNpc();
-		manticoreHandler.onNpcDespawned(npc);
+		if (isManticore(npc))
+		{
+			manticoreHandler.onNpcDespawned(npc);
+		}
 	}
 
 
@@ -382,7 +390,7 @@ public class ColosseumWavesPlugin extends Plugin
 		if (event.getActor() instanceof NPC)
 		{
 			NPC npc = (NPC) event.getActor();
-			if (npc.getId() == 12818) // Manticore
+			if (isManticore(npc))
 			{
 				boolean wasUncharged = manticoreHandler.isManticoreUncharged(npc);
 				manticoreHandler.checkNPCGraphics(npc);

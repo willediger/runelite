@@ -27,7 +27,6 @@ package net.runelite.client.plugins.colosseumwaves;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.gameval.SpotanimID;
-import net.runelite.api.gameval.NpcID;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
@@ -42,8 +41,6 @@ public class ManticoreHandler
 {
 	@Inject
 	private Client client;
-
-	private static final int MANTICORE_NPC_ID = NpcID.COLOSSEUM_MANTICORE;
 
 	private static final int MAGIC_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_MAGIC_01;
 	private static final int RANGED_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_RANGED_01;
@@ -103,11 +100,8 @@ public class ManticoreHandler
 
 	public void onNpcSpawned(NPC npc)
 	{
-		if (npc.getId() == MANTICORE_NPC_ID)
-		{
-			manticores.put(npc, new ManticoreData());
-			orbSequences.put(npc, new ArrayList<>());
-		}
+		manticores.put(npc, new ManticoreData());
+		orbSequences.put(npc, new ArrayList<>());
 	}
 
 	public void onNpcDespawned(NPC npc)
@@ -118,11 +112,6 @@ public class ManticoreHandler
 
 	public void checkNPCGraphics(NPC npc)
 	{
-		if (npc == null || npc.getId() != MANTICORE_NPC_ID)
-		{
-			return;
-		}
-
 		int graphic = npc.getGraphic();
 		if (graphic <= 0)
 		{
