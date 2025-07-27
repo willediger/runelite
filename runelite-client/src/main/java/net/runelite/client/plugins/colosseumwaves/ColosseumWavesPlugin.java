@@ -146,7 +146,6 @@ public class ColosseumWavesPlugin extends Plugin
 	{
 		int npcId;
 		Point location;
-		String name;
 		NPC npcInstance;
 	}
 
@@ -349,7 +348,7 @@ public class ColosseumWavesPlugin extends Plugin
 				int currentTick = client.getTickCount();
 				determineSpawnType(currentTick);
 
-				NPCSpawn spawn = new NPCSpawn(npc.getId(), npcLocation, npc.getName(), npc);
+				NPCSpawn spawn = new NPCSpawn(npc.getId(), npcLocation, npc);
 
 				if (!isReinforcementWave)
 				{
@@ -428,7 +427,7 @@ public class ColosseumWavesPlugin extends Plugin
 				Point currentPos = getNPCSceneLocation(npc);
 				if (currentPos != null)
 				{
-					activeNPCs.add(new NPCSpawn(npc.getId(), currentPos, npc.getName(), npc));
+					activeNPCs.add(new NPCSpawn(npc.getId(), currentPos, npc));
 				}
 			}
 		}
