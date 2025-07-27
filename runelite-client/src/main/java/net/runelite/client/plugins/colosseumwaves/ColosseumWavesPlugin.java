@@ -359,12 +359,8 @@ public class ColosseumWavesPlugin extends Plugin
 				}
 				else
 				{
-					// For reinforcements, capture all active NPC positions at once
-					if (reinforcementSpawns.isEmpty())
-					{
-						captureAllNPCPositions();
-						log.debug("Captured all NPC positions for reinforcement wave");
-					}
+					reinforcementSpawns.clear();
+					reinforcementSpawns.addAll(collectActiveColosseumNPCs());
 				}
 
 				waveComplete = true;
@@ -427,9 +423,9 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
-	private void captureAllNPCPositions()
+	private List<NPCSpawn> collectActiveColosseumNPCs()
 	{
-		reinforcementSpawns.clear();
+		List<NPCSpawn> activeNPCs = new ArrayList<>();
 
 		// Find all Colosseum NPCs currently in the scene
 		for (NPC npc : client.getNpcs())
@@ -439,10 +435,12 @@ public class ColosseumWavesPlugin extends Plugin
 				Point currentPos = getNPCSceneLocation(npc);
 				if (currentPos != null)
 				{
-					reinforcementSpawns.add(new NPCSpawn(npc.getId(), currentPos, npc.getName(), npc));
+					activeNPCs.add(new NPCSpawn(npc.getId(), currentPos, npc.getName(), npc));
 				}
 			}
 		}
+
+		return activeNPCs;
 	}
 
 	private Point getNPCSceneLocation(NPC npc)
@@ -524,21 +522,7 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		// Capture current positions of all Colosseum NPCs on-demand
-		List<NPCSpawn> currentSpawns = new ArrayList<>();
-		for (NPC npc : client.getNpcs())
-		{
-			if (npc != null && COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
-			{
-				Point currentPos = getNPCSceneLocation(npc);
-				if (currentPos != null)
-				{
-					currentSpawns.add(new NPCSpawn(npc.getId(), currentPos, npc.getName(), npc));
-					log.debug("Current LoS: Found {} at scene position {}", npc.getName(), currentPos);
-				}
-			}
-		}
-
-		log.debug("Current LoS: Found {} NPCs total", currentSpawns.size());
+		List<NPCSpawn> currentSpawns = collectActiveColosseumNPCs();
 
 		if (currentSpawns.isEmpty())
 		{
