@@ -26,6 +26,7 @@ package net.runelite.client.plugins.colosseumwaves;
 
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.callback.ClientThread;
 import javax.inject.Inject;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -61,15 +62,17 @@ public class ColosseumWavesPanel extends PluginPanel
 	private static final Color hoverColor = new Color(52, 52, 52);
 
 	private final ColosseumWavesPlugin plugin;
+	private final ClientThread clientThread;
 
 	private final JPanel wavesContainer;
 	private final List<WavePanel> wavePanels = new ArrayList<>();
 
 	@Inject
-	public ColosseumWavesPanel(final ColosseumWavesPlugin plugin)
+	public ColosseumWavesPanel(final ColosseumWavesPlugin plugin, final ClientThread clientThread)
 	{
 		super(false);
 		this.plugin = plugin;
+		this.clientThread = clientThread;
 
 		setBackground(bgColor);
 		setLayout(new BorderLayout());
@@ -83,11 +86,18 @@ public class ColosseumWavesPanel extends PluginPanel
 		JButton currentLoS = buildHeaderButton("Current LoS", buttonColor, hoverColor);
 		currentLoS.addActionListener(e ->
 		{
-			String url = plugin.generateCurrentLoSLink();
-			if (url != null)
+			// Run on client thread to ensure we can access game state
+			clientThread.invokeLater(() ->
 			{
-				LinkBrowser.browse(url);
-			}
+				String url = plugin.generateCurrentLoSLink();
+				SwingUtilities.invokeLater(() ->
+				{
+					if (url != null)
+					{
+						LinkBrowser.browse(url);
+					}
+				});
+			});
 		});
 
 		JLabel wavesLabel = new JLabel("Waves", SwingConstants.CENTER);
