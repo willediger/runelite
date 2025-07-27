@@ -90,12 +90,12 @@ public class ColosseumWavesPlugin extends Plugin
 	private static final int COLOSSEUM_REGION_ID = 7216;
 
 	// NPCs to exclude from tracking
-	private static final Set<String> EXCLUDED_NPC_NAMES = ImmutableSet.of(
-		"Minimus",
-		"Sol Heredit",
-		"Fremennik warband berserker",
-		"Fremennik warband archer",
-		"Fremennik warband seer"
+	private static final Set<Integer> EXCLUDED_NPC_IDS = ImmutableSet.of(
+		NpcID.COLOSSEUM_MASTER, // Minimus
+		NpcID.COLOSSEUM_BOSS_SEATED, // Sol Heredit
+		NpcID.COLOSSEUM_WARBANDER_MELEE_MALE, // Fremennik warband berserker
+		NpcID.COLOSSEUM_WARBANDER_RANGED_FEMALE, // Fremennik warband archer
+		NpcID.COLOSSEUM_WARBANDER_MAGE_MALE // Fremennik warband seer
 	);
 
 	// Colosseum wave NPCs with their LoS tool ID mapping
@@ -112,10 +112,6 @@ public class ColosseumWavesPlugin extends Plugin
 
 	// Pattern to match "Wave: X" messages
 	private static final Pattern WAVE_PATTERN = Pattern.compile("Wave: (\\d+)");
-
-	// Timing constants for wave spawn detection
-	private static final int INITIAL_SPAWN_WINDOW_TICKS = 20;  // NPCs spawn within 20 ticks of wave start
-	private static final int REINFORCEMENT_THRESHOLD_TICKS = 50; // After 50 ticks, spawns are reinforcements
 
 	// LoS tool coordinate conversion
 	private static final int LOS_COORD_OFFSET_X = 32;
@@ -202,22 +198,16 @@ public class ColosseumWavesPlugin extends Plugin
 			int newWave = Integer.parseInt(matcher.group(1));
 
 			// Reset panel ONLY when starting Wave 1 (new run)
-			if (newWave == 1 && panel != null)
+			if (newWave == 1)
 			{
 				panel.reset();
 			}
 
+			clearCurrentWaveState();
+
 			currentWave = newWave;
 			waveStartTick = client.getTickCount();
 			expectingWaveSpawn = true;
-
-			waveSpawns.clear();
-			reinforcementSpawns.clear();
-			playerLocationAtWaveSpawn = null;
-			playerLocationAtReinforcements = null;
-			waveComplete = false;
-			isReinforcementWave = false;
-			hasProcessedReinforcements = false;
 		}
 	}
 
@@ -321,19 +311,12 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			return;
 		}
-
 		NPC npc = event.getNpc();
 
 		// Track manticores
 		if (isManticore(npc))
 		{
 			manticoreHandler.onNpcSpawned(npc);
-		}
-
-		// Skip excluded NPCs
-		if (npc.getName() != null && EXCLUDED_NPC_NAMES.contains(npc.getName()))
-		{
-			return;
 		}
 
 		// Only track Colosseum wave NPCs
@@ -524,21 +507,16 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void determineSpawnType(int currentTick)
 	{
-		if (waveStartTick <= 0)
-		{
-			return;
-		}
-
 		int ticksSinceWaveStart = currentTick - waveStartTick;
 
 		// First spawn within the initial window - this is a wave spawn
-		if (expectingWaveSpawn && ticksSinceWaveStart < INITIAL_SPAWN_WINDOW_TICKS)
+		if (expectingWaveSpawn && ticksSinceWaveStart < 5)
 		{
 			expectingWaveSpawn = false;
 			isReinforcementWave = false;
 		}
 		// Spawns after the reinforcement threshold are reinforcements
-		else if (ticksSinceWaveStart > REINFORCEMENT_THRESHOLD_TICKS && !isReinforcementWave)
+		else if (ticksSinceWaveStart > 10 && !isReinforcementWave)
 		{
 			isReinforcementWave = true;
 		}
@@ -614,15 +592,22 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void resetState()
 	{
+		inColosseum = false;
+		clearCurrentWaveState();
+	}
+
+	private void clearCurrentWaveState()
+	{
+		currentWave = 0;
+		waveStartTick = 0;
+		expectingWaveSpawn = false;
+
 		waveSpawns.clear();
 		reinforcementSpawns.clear();
 		playerLocationAtWaveSpawn = null;
 		playerLocationAtReinforcements = null;
-		inColosseum = false;
-		currentWave = 0;
+		waveComplete = false;
 		isReinforcementWave = false;
-		expectingWaveSpawn = false;
 		hasProcessedReinforcements = false;
-		waveStartTick = 0;
 	}
 }
