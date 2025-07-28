@@ -62,7 +62,7 @@ import net.runelite.client.util.ImageUtil;
 
 @PluginDescriptor(
 	name = "Colosseum Waves",
-	description = "Capture Fortis Colosseum wave spawns and pillar stacks and generate shareable links to line of sight tool for analysis",
+	description = "Capture Fortis Colosseum wave spawns and pillar stacks and generate shareable links to colosim.com's line of sight tool for analysis",
 	tags = {"fortis", "colosseum", "waves", "wave", "spawns", "los"},
 	configName = "colosseumwaves"
 )
