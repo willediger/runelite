@@ -216,8 +216,6 @@ public class ColosseumWavesPlugin extends Plugin
 		else if (waveCompleteMatcher.find())
 		{
 			// Wave completed, reset states for next wave
-			spawnType = SpawnType.INITIAL;
-			captureState = CaptureState.NOT_STORED;
 			clearCurrentWaveState();
 		}
 	}
@@ -585,8 +583,8 @@ public class ColosseumWavesPlugin extends Plugin
 		currentWave = 0;
 		waveStartTick = 0;
 
-		captureState = CaptureState.NOT_STORED;
 		spawnType = SpawnType.INITIAL;
+		captureState = CaptureState.NOT_STORED;
 
 		waveSpawns.clear();
 		reinforcementSpawns.clear();
