@@ -100,7 +100,10 @@ public class ColosseumWavesPlugin extends Plugin
 			.build();
 
 	// Pattern to match "Wave: X" messages
-	private static final Pattern WAVE_PATTERN = Pattern.compile("Wave: (\\d+)");
+	private static final Pattern WAVE_START_PATTERN = Pattern.compile("Wave: (\\d+)");
+
+	// Pattern to match "Wave X complete!" messages
+	private static final Pattern WAVE_COMPLETE_PATTERN = Pattern.compile("Wave (\\d+) completed");
 
 	// LoS tool coordinate conversion
 	private static final int LOS_COORD_OFFSET_X = 32;
@@ -109,8 +112,9 @@ public class ColosseumWavesPlugin extends Plugin
 	// State tracking
 	private boolean inColosseum = false;
 	private int currentWave = 0;
-	private boolean waveComplete = false;
-	private boolean hasProcessedReinforcements = false;
+
+	private CaptureState captureState = CaptureState.NOT_STORED;
+	private SpawnType spawnType = SpawnType.INITIAL;
 
 	// Timing
 	private int waveStartTick = 0;
@@ -122,9 +126,6 @@ public class ColosseumWavesPlugin extends Plugin
 	// Player location at time of spawns (for URL generation)
 	private Point playerLocationAtWaveSpawn = null;
 	private Point playerLocationAtReinforcements = null;
-
-	// Spawn type tracking
-	private SpawnType pendingSpawnType = null;
 
 	// Helper class to store NPC spawn info
 	@Value
@@ -140,6 +141,14 @@ public class ColosseumWavesPlugin extends Plugin
 	{
 		INITIAL,
 		REINFORCEMENTS
+	}
+
+	// Enum to represent capture state
+	private enum CaptureState
+	{
+		NOT_STORED,
+		NPCS_STORED,
+		LINK_GENERATED
 	}
 
 	@Provides
@@ -188,11 +197,12 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		String message = event.getMessage();
-		Matcher matcher = WAVE_PATTERN.matcher(message);
+		Matcher waveStartMatcher = WAVE_START_PATTERN.matcher(message);
+		Matcher waveCompleteMatcher = WAVE_COMPLETE_PATTERN.matcher(message);
 
-		if (matcher.find())
+		if (waveStartMatcher.find())
 		{
-			int newWave = Integer.parseInt(matcher.group(1));
+			int newWave = Integer.parseInt(waveStartMatcher.group(1));
 
 			// Reset panel ONLY when starting Wave 1 (new run)
 			if (newWave == 1)
@@ -200,10 +210,15 @@ public class ColosseumWavesPlugin extends Plugin
 				panel.reset();
 			}
 
-			clearCurrentWaveState();
-
 			currentWave = newWave;
 			waveStartTick = client.getTickCount();
+		}
+		else if (waveCompleteMatcher.find())
+		{
+			// Wave completed, reset states for next wave
+			spawnType = SpawnType.INITIAL;
+			captureState = CaptureState.NOT_STORED;
+			clearCurrentWaveState();
 		}
 	}
 
@@ -228,6 +243,7 @@ public class ColosseumWavesPlugin extends Plugin
 		// Check if we entered/left the Colosseum
 		if (!inColosseum && isInColosseum())
 		{
+			resetState();
 			inColosseum = true;
 		}
 		else if (inColosseum && !isInColosseum())
@@ -235,11 +251,23 @@ public class ColosseumWavesPlugin extends Plugin
 			resetState();
 		}
 
+		// If we're in a wave, update spawnType based on elapsed ticks
+		if (waveStartTick > 0)
+		{
+			int currentTick = client.getTickCount();
+			int ticksSinceWaveStart = currentTick - waveStartTick;
+			if (ticksSinceWaveStart > 10 && spawnType == SpawnType.INITIAL)
+			{
+				spawnType = SpawnType.REINFORCEMENTS;
+				captureState = CaptureState.NOT_STORED;
+			}
+		}
+
 		// Handle wave spawns or reinforcements when ready
-		if (inColosseum && waveComplete && pendingSpawnType != null)
+		if (inColosseum && captureState == CaptureState.NPCS_STORED)
 		{
 			handleWaveSpawnsAndReinforcements();
-			waveComplete = false;
+			captureState = CaptureState.LINK_GENERATED;
 		}
 	}
 
@@ -316,11 +344,8 @@ public class ColosseumWavesPlugin extends Plugin
 		if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 		{
 			Point npcLocation = getNPCSceneLocation(npc);
-			if (npcLocation != null)
+			if (npcLocation != null && captureState == CaptureState.NOT_STORED)
 			{
-				int currentTick = client.getTickCount();
-				SpawnType spawnType = determineSpawnType(currentTick);
-
 				if (spawnType == SpawnType.INITIAL)
 				{
 					waveSpawns.clear();
@@ -332,8 +357,7 @@ public class ColosseumWavesPlugin extends Plugin
 					reinforcementSpawns.addAll(collectActiveColosseumNPCs());
 				}
 
-				pendingSpawnType = spawnType;
-				waveComplete = true;
+				captureState = CaptureState.NPCS_STORED;
 			}
 		}
 	}
@@ -379,7 +403,7 @@ public class ColosseumWavesPlugin extends Plugin
 					updateSpawnUrlForCurrentWave();
 
 					// If we've already processed reinforcements, also update reinforcement URL
-					if (hasProcessedReinforcements)
+					if (spawnType == SpawnType.REINFORCEMENTS)
 					{
 						updateReinforcementUrlForCurrentWave();
 					}
@@ -429,7 +453,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void handleWaveSpawnsAndReinforcements()
 	{
-		switch (pendingSpawnType)
+		switch (spawnType)
 		{
 			case INITIAL:
 				// Handle initial spawns
@@ -457,13 +481,9 @@ public class ColosseumWavesPlugin extends Plugin
 					}
 					String url = buildLoSUrl(reinforcementSpawns, config.includePlayerLocationReinforcements(), playerLocationAtReinforcements);
 					panel.setWaveReinforcementUrl(currentWave, url);
-					hasProcessedReinforcements = true;
 				}
 				break;
 		}
-
-		// Reset pending spawn type after processing
-		pendingSpawnType = null;
 	}
 
 	public String generateCurrentLoSLink()
@@ -486,23 +506,6 @@ public class ColosseumWavesPlugin extends Plugin
 		String url = buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
 		return url;
 	}
-
-	private SpawnType determineSpawnType(int currentTick)
-	{
-		int ticksSinceWaveStart = currentTick - waveStartTick;
-
-		// Spawns after the reinforcement threshold are reinforcements
-		if (ticksSinceWaveStart > 10)
-		{
-			return SpawnType.REINFORCEMENTS;
-		}
-		// All other spawns are initial spawns
-		else
-		{
-			return SpawnType.INITIAL;
-		}
-	}
-
 
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NPCSpawn spawn)
 	{
@@ -582,12 +585,12 @@ public class ColosseumWavesPlugin extends Plugin
 		currentWave = 0;
 		waveStartTick = 0;
 
+		captureState = CaptureState.NOT_STORED;
+		spawnType = SpawnType.INITIAL;
+
 		waveSpawns.clear();
 		reinforcementSpawns.clear();
 		playerLocationAtWaveSpawn = null;
 		playerLocationAtReinforcements = null;
-		waveComplete = false;
-		hasProcessedReinforcements = false;
-		pendingSpawnType = null;
 	}
 }
