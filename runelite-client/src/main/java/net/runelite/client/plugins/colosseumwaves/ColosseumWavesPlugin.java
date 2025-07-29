@@ -395,7 +395,7 @@ public class ColosseumWavesPlugin extends Plugin
 	{
 		if (!reinforcementsPhase)
 		{
-			if (!waveSpawns.isEmpty() && currentWave > 0)
+			if (!waveSpawns.isEmpty())
 			{
 				if (config.includePlayerLocationSpawns())
 				{
