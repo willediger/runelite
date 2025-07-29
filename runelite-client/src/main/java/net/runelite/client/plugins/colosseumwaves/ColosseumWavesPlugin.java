@@ -285,6 +285,12 @@ public class ColosseumWavesPlugin extends Plugin
 
 		if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 		{
+			// Don't track NPCs if we're not in an active wave
+			if (currentWave <= 0)
+			{
+				return;
+			}
+
 			if (!npcsCaptured)
 			{
 				List<NpcSpawn> spawns = collectActiveColosseumNPCs();
@@ -389,7 +395,7 @@ public class ColosseumWavesPlugin extends Plugin
 	{
 		if (!reinforcementsPhase)
 		{
-			if (!waveSpawns.isEmpty())
+			if (!waveSpawns.isEmpty() && currentWave > 0)
 			{
 				if (config.includePlayerLocationSpawns())
 				{
