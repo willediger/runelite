@@ -24,30 +24,30 @@
  */
 package net.runelite.client.plugins.colosseumwaves;
 
-import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.PluginPanel;
-import net.runelite.client.callback.ClientThread;
-import javax.inject.Inject;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.BoxLayout;
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.SwingConstants;
-import javax.swing.Box;
-import javax.swing.SwingUtilities;
-import javax.swing.border.EmptyBorder;
-import java.awt.Color;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import net.runelite.client.util.LinkBrowser;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.border.EmptyBorder;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.client.callback.ClientThread;
+import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.util.LinkBrowser;
 
 @Slf4j
 public class ColosseumWavesPanel extends PluginPanel

@@ -24,16 +24,16 @@
  */
 package net.runelite.client.plugins.colosseumwaves;
 
-import net.runelite.api.Client;
-import net.runelite.api.NPC;
-import net.runelite.api.gameval.SpotanimID;
-import java.util.Map;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Client;
+import net.runelite.api.NPC;
+import net.runelite.api.gameval.SpotanimID;
 
 @Slf4j
 @Singleton
