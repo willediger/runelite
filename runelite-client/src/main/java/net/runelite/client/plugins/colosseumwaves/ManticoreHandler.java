@@ -46,9 +46,19 @@ public class ManticoreHandler
 	private static final int RANGED_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_RANGED_01;
 	private static final int MELEE_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_MELEE_01;
 
-	private final Map<NPC, ManticoreData> manticores = new HashMap<>();
+	/**
+	 * Tracks manticore data keyed by NPC index.  Using the index rather than
+	 * holding strong references to the NPCs avoids retaining stale NPC
+	 * instances, which the client recycles as monsters despawn and respawn.
+	 */
+	private final Map<Integer, ManticoreData> manticores = new HashMap<>();
 
-	private final Map<NPC, List<Integer>> orbSequences = new HashMap<>();
+	/**
+	 * Records the sequence of orb graphics for each manticore keyed by
+	 * NPC index.  This list is cleared after detecting three orbs, as
+	 * manticore attack patterns repeat every three projectiles.
+	 */
+	private final Map<Integer, List<Integer>> orbSequences = new HashMap<>();
 
 	private enum AttackType
 	{
@@ -80,15 +90,53 @@ public class ManticoreHandler
 		}
 	}
 
+	/**
+	 * Look up the LOS suffix for a manticore by NPC instance.  Internally this
+	 * delegates to {@link #getManticoreLosSuffix(int)} using the NPC index.
+	 *
+	 * @param npc the manticore NPC
+	 * @return 'u' if the attack pattern is unknown, 'm' for magic first and
+	 * 'r' for ranged first
+	 */
 	public char getManticoreLosSuffix(NPC npc)
 	{
-		ManticoreData data = manticores.get(npc);
+		return getManticoreLosSuffix(npc.getIndex());
+	}
+
+	/**
+	 * Look up the LOS suffix for a manticore by NPC index.  If no data exists
+	 * for this index, the default uncharged suffix ('u') is returned.
+	 *
+	 * @param npcIndex the index of the manticore
+	 * @return suffix character encoding the attack pattern
+	 */
+	public char getManticoreLosSuffix(int npcIndex)
+	{
+		ManticoreData data = manticores.get(npcIndex);
 		return data != null ? data.getLosSuffix() : 'u';
 	}
 
+	/**
+	 * Determine whether a manticore is uncharged (i.e. its first orb attack has
+	 * not yet been observed) based on the NPC instance.
+	 *
+	 * @param npc the manticore NPC
+	 * @return true if no attack pattern has been recorded
+	 */
 	public boolean isManticoreUncharged(NPC npc)
 	{
-		ManticoreData data = manticores.get(npc);
+		return isManticoreUncharged(npc.getIndex());
+	}
+
+	/**
+	 * Determine whether a manticore is uncharged based on its NPC index.
+	 *
+	 * @param npcIndex the manticore's index
+	 * @return true if the first attack has not been observed yet
+	 */
+	public boolean isManticoreUncharged(int npcIndex)
+	{
+		ManticoreData data = manticores.get(npcIndex);
 		return data == null || !data.isPatternKnown();
 	}
 
@@ -100,14 +148,16 @@ public class ManticoreHandler
 
 	public void onNpcSpawned(NPC npc)
 	{
-		manticores.put(npc, new ManticoreData());
-		orbSequences.put(npc, new ArrayList<>());
+		int index = npc.getIndex();
+		manticores.put(index, new ManticoreData());
+		orbSequences.put(index, new ArrayList<>());
 	}
 
 	public void onNpcDespawned(NPC npc)
 	{
-		manticores.remove(npc);
-		orbSequences.remove(npc);
+		int index = npc.getIndex();
+		manticores.remove(index);
+		orbSequences.remove(index);
 	}
 
 	public void checkNPCGraphics(NPC npc)
@@ -120,13 +170,14 @@ public class ManticoreHandler
 
 		if (graphic == MAGIC_ORB_GRAPHIC_ID || graphic == RANGED_ORB_GRAPHIC_ID || graphic == MELEE_ORB_GRAPHIC_ID)
 		{
-			ManticoreData data = manticores.get(npc);
+			int index = npc.getIndex();
+			ManticoreData data = manticores.get(index);
 			if (data == null)
 			{
 				return;
 			}
 
-			List<Integer> sequence = orbSequences.get(npc);
+			List<Integer> sequence = orbSequences.get(index);
 			if (sequence == null)
 			{
 				return;
