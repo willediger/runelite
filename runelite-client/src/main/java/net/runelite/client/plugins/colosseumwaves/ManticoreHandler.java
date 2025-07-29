@@ -79,11 +79,6 @@ public class ManticoreHandler
 		}
 	}
 
-	public char getManticoreLosSuffix(NPC npc)
-	{
-		return getManticoreLosSuffix(npc.getIndex());
-	}
-
 	public char getManticoreLosSuffix(int npcIndex)
 	{
 		ManticoreData data = manticores.get(npcIndex);
