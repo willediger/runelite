@@ -33,18 +33,18 @@ import net.runelite.client.config.ConfigSection;
 public interface ColosseumWavesConfig extends Config
 {
 	@ConfigSection(
-		name = "Include Player Locations",
+		name = "Include Player Location",
 		description = "Configure when to include player location in LoS links",
 		position = 0
 	)
-	String includePlayerLocationsSection = "includePlayerLocations";
+	String includePlayerLocationSection = "includePlayerLocation";
 
 	@ConfigItem(
 		keyName = "includePlayerLocationSpawns",
 		name = "Spawn",
 		description = "Include player location in LoS links for wave spawns",
 		position = 1,
-		section = includePlayerLocationsSection
+		section = includePlayerLocationSection
 	)
 	default boolean includePlayerLocationSpawns()
 	{
@@ -56,7 +56,7 @@ public interface ColosseumWavesConfig extends Config
 		name = "Reinforcements",
 		description = "Include player location in LoS links for reinforcements",
 		position = 2,
-		section = includePlayerLocationsSection
+		section = includePlayerLocationSection
 	)
 	default boolean includePlayerLocationReinforcements()
 	{
@@ -68,7 +68,7 @@ public interface ColosseumWavesConfig extends Config
 		name = "Current LoS",
 		description = "Include player location in LoS links for the Current LoS button",
 		position = 3,
-		section = includePlayerLocationsSection
+		section = includePlayerLocationSection
 	)
 	default boolean includePlayerLocationCurrent()
 	{
