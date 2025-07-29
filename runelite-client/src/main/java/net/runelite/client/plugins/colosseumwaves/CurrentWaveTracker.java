@@ -31,12 +31,6 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Point;
 
-/**
- * Tracks the spawn information for the current wave of the Fortis Colosseum.
- * The tracker stores the initial wave NPC spawns, reinforcement spawns and
- * optional player positions when the spawns occurred. It is intended to be
- * reused across waves by calling {@link #reset()} between waves.
- */
 @Getter
 public class CurrentWaveTracker
 {
@@ -47,10 +41,6 @@ public class CurrentWaveTracker
 	@Setter
 	private Point playerLocationAtReinforcements;
 
-	/**
-	 * Remove all tracked spawns and player locations.  This should be called at
-	 * the beginning of a new wave.
-	 */
 	public void reset()
 	{
 		waveSpawns.clear();
@@ -59,24 +49,12 @@ public class CurrentWaveTracker
 		playerLocationAtReinforcements = null;
 	}
 
-	/**
-	 * Record initial spawns for the current wave.  Any previously stored
-	 * spawns will be cleared.
-	 *
-	 * @param spawns list of NPC spawns for the wave start
-	 */
 	public void recordInitialSpawns(List<NpcSpawn> spawns)
 	{
 		waveSpawns.clear();
 		waveSpawns.addAll(spawns);
 	}
 
-	/**
-	 * Record reinforcement spawns for the current wave.  Any previously stored
-	 * reinforcement spawns will be cleared.
-	 *
-	 * @param spawns list of NPC spawns for reinforcements
-	 */
 	public void recordReinforcementSpawns(List<NpcSpawn> spawns)
 	{
 		reinforcementSpawns.clear();

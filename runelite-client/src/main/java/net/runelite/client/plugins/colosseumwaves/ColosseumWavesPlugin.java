@@ -116,19 +116,14 @@ public class ColosseumWavesPlugin extends Plugin
 	// Timing
 	private int waveStartTick = 0;
 
-	/**
-	 * Tracker for the current wave's spawn information.
-	 */
 	private final CurrentWaveTracker currentWaveTracker = new CurrentWaveTracker();
 
-	// Enum to represent spawn types
 	private enum SpawnType
 	{
 		INITIAL,
 		REINFORCEMENTS
 	}
 
-	// Enum to represent capture state
 	private enum CaptureState
 	{
 		NOT_STORED,
@@ -189,7 +184,6 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			int newWave = Integer.parseInt(waveStartMatcher.group(1));
 
-			// Reset panel ONLY when starting Wave 1 (new run)
 			if (newWave == 1)
 			{
 				panel.reset();
@@ -206,7 +200,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
-	{ // if the plugin thinks we're in the colosseum but we're not, reset state
+	{
 		if (inColosseum && event.getGameState() == GameState.LOGGED_IN && !isInColosseum())
 		{
 			resetState();
@@ -222,7 +216,6 @@ public class ColosseumWavesPlugin extends Plugin
 			return;
 		}
 
-		// Check if we entered/left the Colosseum
 		if (!inColosseum && isInColosseum())
 		{
 			resetState();
@@ -233,7 +226,6 @@ public class ColosseumWavesPlugin extends Plugin
 			resetState();
 		}
 
-		// If we're in a wave, update spawnType based on elapsed ticks
 		if (waveStartTick > 0)
 		{
 			int currentTick = client.getTickCount();
@@ -245,7 +237,6 @@ public class ColosseumWavesPlugin extends Plugin
 			}
 		}
 
-		// Handle wave spawns or reinforcements when ready
 		if (inColosseum && captureState == CaptureState.NPCS_STORED)
 		{
 			handleWaveSpawnsAndReinforcements();
@@ -316,20 +307,16 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 		NPC npc = event.getNpc();
 
-		// Track manticores
 		if (isManticore(npc))
 		{
 			manticoreHandler.onNpcSpawned(npc);
 		}
 
-		// Only track Colosseum wave NPCs
 		if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 		{
 			Point npcLocation = getNPCSceneLocation(npc);
-			// Only record spawns once per spawn type per wave
 			if (npcLocation != null && captureState == CaptureState.NOT_STORED)
 			{
-				// Collect current active Colosseum NPCs and record them in the tracker
 				List<NpcSpawn> spawns = collectActiveColosseumNPCs();
 				if (spawnType == SpawnType.INITIAL)
 				{
@@ -353,7 +340,6 @@ public class ColosseumWavesPlugin extends Plugin
 			return;
 		}
 
-		// Only track manticore despawn for suffix tracking
 		NPC npc = event.getNpc();
 		if (isManticore(npc))
 		{
@@ -379,13 +365,10 @@ public class ColosseumWavesPlugin extends Plugin
 				manticoreHandler.checkNPCGraphics(npc);
 				boolean isNowCharged = !manticoreHandler.isManticoreUncharged(npc);
 
-				// If manticore just became charged, update the appropriate URL(s)
 				if (wasUncharged && isNowCharged)
 				{
-					// Always update spawn URL
 					updateCurrentWaveUrl(SpawnType.INITIAL);
 
-					// If we've already processed reinforcements, also update reinforcement URL
 					if (spawnType == SpawnType.REINFORCEMENTS)
 					{
 						updateCurrentWaveUrl(SpawnType.REINFORCEMENTS);
@@ -399,7 +382,6 @@ public class ColosseumWavesPlugin extends Plugin
 	{
 		List<NpcSpawn> activeNPCs = new ArrayList<>();
 
-		// Find all Colosseum NPCs currently in the scene
 		for (NPC npc : client.getNpcs())
 		{
 			if (npc != null && COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
@@ -407,7 +389,6 @@ public class ColosseumWavesPlugin extends Plugin
 				Point currentPos = getNPCSceneLocation(npc);
 				if (currentPos != null)
 				{
-					// Store the NPC ID, scene location and NPC index in the spawn record
 					activeNPCs.add(new NpcSpawn(npc.getId(), currentPos, npc.getIndex()));
 				}
 			}
@@ -440,22 +421,18 @@ public class ColosseumWavesPlugin extends Plugin
 		switch (spawnType)
 		{
 			case INITIAL:
-				// Handle initial spawns for the current wave
 				if (currentWaveTracker.hasWaveSpawns())
 				{
-					// Record the player's location at spawn time if configured
 					if (config.includePlayerLocationSpawns())
 					{
 						currentWaveTracker.setPlayerLocationAtWaveSpawn(getPlayerLoSLocation());
 					}
-					// Add a new row for this wave before updating the URL
 					panel.addWave(currentWave);
 					updateCurrentWaveUrl(SpawnType.INITIAL);
 				}
 				break;
 
 			case REINFORCEMENTS:
-				// Handle reinforcement spawns for the current wave
 				if (currentWaveTracker.hasReinforcements())
 				{
 					if (config.includePlayerLocationReinforcements())
@@ -475,7 +452,6 @@ public class ColosseumWavesPlugin extends Plugin
 			return null;
 		}
 
-		// Capture current positions of all Colosseum NPCs on-demand
 		List<NpcSpawn> currentSpawns = collectActiveColosseumNPCs();
 
 		if (currentSpawns.isEmpty())
@@ -483,20 +459,17 @@ public class ColosseumWavesPlugin extends Plugin
 			return null;
 		}
 
-		// For current LoS, get player's current position if configured
 		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLoSLocation() : null;
 		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
 	}
 
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NpcSpawn spawn)
 	{
-		// Only append a suffix for manticores
 		if (spawn.getNpcId() != NpcID.COLOSSEUM_MANTICORE)
 		{
 			return;
 		}
 
-		// Look up the attack pattern for this manticore by its NPC index
 		char suffix = manticoreHandler.getManticoreLosSuffix(spawn.getNpcIndex());
 		urlBuilder.append(suffix);
 	}
@@ -520,7 +493,6 @@ public class ColosseumWavesPlugin extends Plugin
 			}
 		}
 
-		// Add player position if configured
 		if (includePlayer && playerLocation != null)
 		{
 			int playerEncoded = playerLocation.getX() + (256 * playerLocation.getY());
@@ -530,14 +502,6 @@ public class ColosseumWavesPlugin extends Plugin
 		return urlBuilder.toString();
 	}
 
-	/**
-	 * Update the panel with a new LoS URL for the current wave.  This method
-	 * centralises URL generation for both initial spawns and reinforcements.
-	 * It rebuilds the URL based on the current spawn list, manticore attack
-	 * patterns and optional player position.
-	 *
-	 * @param type whether to update the initial spawn URL or reinforcement URL
-	 */
 	private void updateCurrentWaveUrl(SpawnType type)
 	{
 		if (panel == null || currentWave <= 0)
@@ -585,13 +549,11 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void clearCurrentWaveState()
 	{
-		// Reset state for the next wave
 		currentWave = 0;
 		waveStartTick = 0;
 		captureState = CaptureState.NOT_STORED;
 		spawnType = SpawnType.INITIAL;
 
-		// Clear all recorded spawns and player positions using the tracker
 		currentWaveTracker.reset();
 	}
 }

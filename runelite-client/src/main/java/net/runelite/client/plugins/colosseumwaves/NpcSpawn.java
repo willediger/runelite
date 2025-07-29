@@ -29,13 +29,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import net.runelite.api.Point;
 
-/**
- * Simple value object representing a spawned NPC in the Colosseum.
- * <p>
- * Each spawn records the NPC's ID, its scene location and the index of the
- * underlying NPC in the client.  The index is used to look up manticore attack
- * patterns without holding strong references to NPC objects.
- */
 @Getter
 @AllArgsConstructor
 public class NpcSpawn
