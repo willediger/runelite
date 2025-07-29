@@ -210,12 +210,6 @@ public class ColosseumWavesPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		Player localPlayer = client.getLocalPlayer();
-		if (localPlayer == null)
-		{
-			return;
-		}
-
 		if (!inColosseum && isInColosseum())
 		{
 			resetState();
@@ -255,23 +249,25 @@ public class ColosseumWavesPlugin extends Plugin
 		WorldPoint worldLocation = localPlayer.getWorldLocation();
 		LocalPoint localPoint = LocalPoint.fromWorld(client, worldLocation);
 
-		if (localPoint != null)
+		if (localPoint == null)
 		{
-			Scene scene = client.getScene();
-			Tile[][][] tiles = scene.getTiles();
+			return null;
+		}
 
-			int sceneX = localPoint.getSceneX();
-			int sceneY = localPoint.getSceneY();
-			int plane = client.getPlane();
+		Scene scene = client.getScene();
+		Tile[][][] tiles = scene.getTiles();
 
-			if (sceneX >= 0 && sceneX < 104 && sceneY >= 0 && sceneY < 104 && plane >= 0 && plane < 4)
+		int sceneX = localPoint.getSceneX();
+		int sceneY = localPoint.getSceneY();
+		int plane = client.getPlane();
+
+		if (sceneX >= 0 && sceneX < 104 && sceneY >= 0 && sceneY < 104 && plane >= 0 && plane < 4)
+		{
+			Tile playerTile = tiles[plane][sceneX][sceneY];
+			if (playerTile != null)
 			{
-				Tile playerTile = tiles[plane][sceneX][sceneY];
-				if (playerTile != null)
-				{
-					Point sceneLocation = playerTile.getSceneLocation();
-					return convertToLoSCoordinates(sceneLocation);
-				}
+				Point sceneLocation = playerTile.getSceneLocation();
+				return convertToLoSCoordinates(sceneLocation);
 			}
 		}
 		return null;
@@ -280,14 +276,11 @@ public class ColosseumWavesPlugin extends Plugin
 	private boolean isInColosseum()
 	{
 		int[] mapRegions = client.getMapRegions();
-		if (mapRegions != null)
+		for (int region : mapRegions)
 		{
-			for (int region : mapRegions)
+			if (region == COLOSSEUM_REGION_ID)
 			{
-				if (region == COLOSSEUM_REGION_ID)
-				{
-					return true;
-				}
+				return true;
 			}
 		}
 		return false;
@@ -295,7 +288,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private boolean isManticore(NPC npc)
 	{
-		return npc != null && npc.getId() == NpcID.COLOSSEUM_MANTICORE;
+		return npc.getId() == NpcID.COLOSSEUM_MANTICORE;
 	}
 
 	@Subscribe
@@ -314,8 +307,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 		if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 		{
-			Point npcLocation = getNPCSceneLocation(npc);
-			if (npcLocation != null && captureState == CaptureState.NOT_STORED)
+			if (captureState == CaptureState.NOT_STORED)
 			{
 				List<NpcSpawn> spawns = collectActiveColosseumNPCs();
 				if (spawnType == SpawnType.INITIAL)
@@ -384,13 +376,10 @@ public class ColosseumWavesPlugin extends Plugin
 
 		for (NPC npc : client.getNpcs())
 		{
-			if (npc != null && COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
+			if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 			{
 				Point currentPos = getNPCSceneLocation(npc);
-				if (currentPos != null)
-				{
-					activeNPCs.add(new NpcSpawn(npc.getId(), currentPos, npc.getIndex()));
-				}
+				activeNPCs.add(new NpcSpawn(npc.getId(), currentPos, npc.getIndex()));
 			}
 		}
 
@@ -504,7 +493,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private void updateCurrentWaveUrl(SpawnType type)
 	{
-		if (panel == null || currentWave <= 0)
+		if (currentWave <= 0)
 		{
 			return;
 		}
