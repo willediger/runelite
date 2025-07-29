@@ -66,6 +66,23 @@ import net.runelite.client.util.ImageUtil;
 )
 public class ColosseumWavesPlugin extends Plugin
 {
+	private static final int COLOSSEUM_REGION_ID = 7216;
+	private static final int LOS_COORD_OFFSET_X = 32;
+	private static final int LOS_COORD_OFFSET_Y = 83;
+
+	private static final Pattern WAVE_START_PATTERN = Pattern.compile("Wave: (\\d+)");
+	private static final Pattern WAVE_COMPLETE_PATTERN = Pattern.compile("Wave (\\d+) completed");
+
+	private static final Map<Integer, Integer> COLOSSEUM_WAVE_NPCS = ImmutableMap.<Integer, Integer>builder()
+		.put(NpcID.COLOSSEUM_STANDARD_MAGER, 1) // Serpent shaman
+		.put(NpcID.COLOSSEUM_JAVELIN_COLOSSUS, 2) // Javelin Colossus
+		.put(NpcID.COLOSSEUM_JAGUAR_WARRIOR, 3) // Jaguar warrior
+		.put(NpcID.COLOSSEUM_MANTICORE, 4) // Manticore
+		.put(NpcID.COLOSSEUM_MINOTAUR, 5) // Minotaur
+		.put(NpcID.COLOSSEUM_MINOTAUR_ROUTEFIND, 5) // Minotaur (Red Flag)
+		.put(NpcID.COLOSSEUM_SHOCKWAVE_COLOSSUS, 6) // Shockwave Colossus
+		.build();
+
 	@Inject
 	private Client client;
 
@@ -81,41 +98,12 @@ public class ColosseumWavesPlugin extends Plugin
 	private ColosseumWavesPanel panel;
 	private NavigationButton navButton;
 
-	// Fortis Colosseum region ID
-	private static final int COLOSSEUM_REGION_ID = 7216;
+	private boolean inColosseum;
+	private int currentWave;
+	private int waveStartTick;
+	private boolean reinforcementsPhase;
+	private boolean npcsCaptured;
 
-	// Colosseum wave NPCs with their LoS tool ID mapping
-	private static final Map<Integer, Integer> COLOSSEUM_WAVE_NPCS =
-		ImmutableMap.<Integer, Integer>builder()
-			.put(NpcID.COLOSSEUM_STANDARD_MAGER, 1) // Serpent shaman
-			.put(NpcID.COLOSSEUM_JAVELIN_COLOSSUS, 2) // Javelin Colossus
-			.put(NpcID.COLOSSEUM_JAGUAR_WARRIOR, 3) // Jaguar warrior
-			.put(NpcID.COLOSSEUM_MANTICORE, 4) // Manticore
-			.put(NpcID.COLOSSEUM_MINOTAUR, 5) // Minotaur
-			.put(NpcID.COLOSSEUM_MINOTAUR_ROUTEFIND, 5) // Minotaur (Red Flag)
-			.put(NpcID.COLOSSEUM_SHOCKWAVE_COLOSSUS, 6) // Shockwave Colossus
-			.build();
-
-	// Pattern to match "Wave: X" messages
-	private static final Pattern WAVE_START_PATTERN = Pattern.compile("Wave: (\\d+)");
-
-	// Pattern to match "Wave X complete!" messages
-	private static final Pattern WAVE_COMPLETE_PATTERN = Pattern.compile("Wave (\\d+) completed");
-
-	// LoS tool coordinate conversion
-	private static final int LOS_COORD_OFFSET_X = 32;
-	private static final int LOS_COORD_OFFSET_Y = 83;
-
-	// State tracking
-	private boolean inColosseum = false;
-	private int currentWave = 0;
-	private boolean reinforcementsPhase = false;
-	private boolean npcsCaptured = false;
-
-	// Timing
-	private int waveStartTick = 0;
-
-	// Wave tracking
 	private final List<NpcSpawn> waveSpawns = new ArrayList<>();
 	private final List<NpcSpawn> reinforcementSpawns = new ArrayList<>();
 	private Point playerLocationAtWaveSpawn;
