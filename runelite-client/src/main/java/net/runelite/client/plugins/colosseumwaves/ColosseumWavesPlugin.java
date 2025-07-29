@@ -57,7 +57,6 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
-//import net.runelite.client.plugins.colosseumwaves.NpcSpawn;
 
 @PluginDescriptor(
 	name = "Colosseum Waves",
