@@ -76,26 +76,38 @@ public class ManticoreHandler
 				return "u"; // Uncharged
 			}
 
-			if (!isMantimayhem3Active)
+			// Check if we have a complete sequence
+			if (sequenceComplete && orbSequence.size() == 3)
 			{
-				// Without MM3, just return first orb
-				return String.valueOf(orbSequence.get(0).code);
-			}
-			else if (sequenceComplete && orbSequence.size() == 3)
-			{
-				// With MM3, return full sequence
-				StringBuilder sb = new StringBuilder();
-				for (OrbType orb : orbSequence)
+				// If third orb is melee, it's a standard sequence
+				boolean isStandardSequence = orbSequence.get(2) == OrbType.MELEE;
+
+				// If it's a standard sequence, abbreviate even with MM3
+				if (isStandardSequence)
 				{
-					sb.append(orb.code);
+					return String.valueOf(orbSequence.get(0).code);
 				}
-				return sb.toString();
+				else
+				{
+					// Non-standard sequence - always return full sequence
+					// (MM3 must be active for non-standard sequences to occur)
+					StringBuilder sb = new StringBuilder();
+					for (OrbType orb : orbSequence)
+					{
+						sb.append(orb.code);
+					}
+					return sb.toString();
+				}
 			}
-			else
+
+			// If MM3 is active but sequence not complete, return "u"
+			if (isMantimayhem3Active && !sequenceComplete)
 			{
-				// MM3 active but sequence not complete yet - still return "u" until we know full sequence
 				return "u";
 			}
+
+			// Without MM3 or with incomplete sequence and no MM3, return first orb
+			return orbSequence.isEmpty() ? "u" : String.valueOf(orbSequence.get(0).code);
 		}
 
 		boolean isCharged()
@@ -118,9 +130,13 @@ public class ManticoreHandler
 		ManticoreData data = manticores.get(npcIndex);
 		if (data == null)
 		{
+			log.debug("Manticore {} not found in tracking map", npcIndex);
 			return "u";
 		}
-		return data.getLosSuffix(isMantimayhem3Active());
+		String suffix = data.getLosSuffix(isMantimayhem3Active());
+		log.debug("Manticore {} current suffix: {}, charged: {}, sequence: {}, complete: {}",
+			npcIndex, suffix, data.charged, data.orbSequence, data.sequenceComplete);
+		return suffix;
 	}
 
 	public String getManticoreSpawnLosSuffix(int npcIndex, boolean isReinforcement)
@@ -149,9 +165,19 @@ public class ManticoreHandler
 			}
 		}
 
-		// If it was charged at spawn, use captured state
+		// If it was charged at spawn
 		if (capturedState != null && capturedState.isCharged())
 		{
+			// With MM3, we might have captured a partial pattern but now have the complete pattern
+			if (isMM3Active && currentState != null && currentState.sequenceComplete && !capturedState.sequenceComplete)
+			{
+				// Use the current complete pattern instead of the captured partial pattern
+				String suffix = currentState.getLosSuffix(isMM3Active);
+				log.debug("Manticore {} was partially charged at {}, now complete: {}",
+					npcIndex, isReinforcement ? "reinforcement" : "spawn", suffix);
+				return suffix;
+			}
+			
 			String result = capturedState.getLosSuffix(isMM3Active);
 			log.debug("Manticore {} was charged at {}: {}",
 				npcIndex, isReinforcement ? "reinforcement" : "spawn", result);
@@ -232,7 +258,7 @@ public class ManticoreHandler
 		int index = npc.getIndex();
 		manticores.put(index, new ManticoreData());
 	}
-	
+
 	public void ensureManticoreTracked(NPC npc)
 	{
 		int index = npc.getIndex();

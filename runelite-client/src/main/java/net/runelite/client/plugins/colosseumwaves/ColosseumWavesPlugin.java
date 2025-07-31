@@ -113,6 +113,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 	// Mantimayhem III tracking
 	private static final int VARBIT_MANTIMAYHEM = 4588; // Varbit for Mantimayhem level
+	private boolean mantimayhem3Active = false;
 
 	@Provides
 	ColosseumWavesConfig provideConfig(ConfigManager configManager)
@@ -409,7 +410,7 @@ public class ColosseumWavesPlugin extends Plugin
 				{
 					manticoreHandler.ensureManticoreTracked(npc);
 				}
-				
+
 				Point currentPos = getNPCSceneLocation(npc);
 				activeNPCs.add(new NpcSpawn(npc.getId(), currentPos, npc.getIndex()));
 			}
@@ -557,6 +558,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 			String url = buildLoSUrl(spawns, includePlayer, playerLocation, true, false);
 			panel.setWaveSpawnUrl(currentWave, url);
+			log.debug("Updated wave {} spawn URL: {}", currentWave, url);
 		}
 		else
 		{
@@ -570,14 +572,15 @@ public class ColosseumWavesPlugin extends Plugin
 
 			String url = buildLoSUrl(spawns, includePlayer, playerLocation, true, true);
 			panel.setWaveReinforcementUrl(currentWave, url);
+			log.debug("Updated wave {} reinforcement URL: {}", currentWave, url);
 		}
 	}
 
 	private void resetState()
 	{
 		inColosseum = false;
+		mantimayhem3Active = false;
 		clearCurrentWaveState();
-		manticoreHandler.setMantimayhem3Active(false);
 	}
 
 	private void clearCurrentWaveState()
@@ -592,20 +595,21 @@ public class ColosseumWavesPlugin extends Plugin
 		playerLocationAtWaveSpawn = null;
 		playerLocationAtReinforcements = null;
 
-		// Clear manticore spawn states for the next wave
 		manticoreHandler.clear();
 	}
 
 	private void checkMantimayhem3Status()
 	{
 		// Simply check if Mantimayhem is level 3 or higher
-		boolean mm3Active = client.getVarbitValue(VARBIT_MANTIMAYHEM) >= 3;
+		int mantimayhemlevel = client.getVarbitValue(VARBIT_MANTIMAYHEM);
+		boolean mm3Active = mantimayhemlevel >= 3;
 
 		// Only log when status changes
-		boolean currentStatus = manticoreHandler.isMantimayhem3Active();
-		if (currentStatus != mm3Active)
+		if (mantimayhem3Active != mm3Active)
 		{
-			log.debug("Mantimayhem III status changed: {}", mm3Active);
+			log.debug("Mantimayhem III status changed: {} (varbit value: {})", mm3Active, mantimayhemlevel);
+			mantimayhem3Active = mm3Active;
+			// Also update the handler so it knows the current MM3 status
 			manticoreHandler.setMantimayhem3Active(mm3Active);
 		}
 	}
