@@ -54,7 +54,7 @@ public class ManticoreHandler
 
 	private enum OrbType
 	{
-		MAGIC('m'), RANGED('r'), MELEE('l');
+		MAGIC('m'), RANGED('r'), MELEE('M');
 		final char code;
 
 		OrbType(char code)
@@ -177,7 +177,7 @@ public class ManticoreHandler
 					npcIndex, isReinforcement ? "reinforcement" : "spawn", suffix);
 				return suffix;
 			}
-			
+
 			String result = capturedState.getLosSuffix(isMM3Active);
 			log.debug("Manticore {} was charged at {}: {}",
 				npcIndex, isReinforcement ? "reinforcement" : "spawn", result);
@@ -279,10 +279,6 @@ public class ManticoreHandler
 	public void checkNPCGraphics(NPC npc)
 	{
 		int graphic = npc.getGraphic();
-		if (graphic <= 0)
-		{
-			return;
-		}
 
 		if (graphic == MAGIC_ORB_GRAPHIC_ID || graphic == RANGED_ORB_GRAPHIC_ID || graphic == MELEE_ORB_GRAPHIC_ID)
 		{
