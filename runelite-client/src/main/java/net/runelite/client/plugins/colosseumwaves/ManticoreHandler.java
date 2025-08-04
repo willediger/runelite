@@ -49,8 +49,6 @@ public class ManticoreHandler
 	private static final int MELEE_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_MELEE_01;
 
 	private final Map<Integer, ManticoreData> manticores = new HashMap<>();
-	private final Map<Integer, ManticoreData> initialSpawnStates = new HashMap<>();
-	private final Map<Integer, ManticoreData> reinforcementSpawnStates = new HashMap<>();
 
 	private enum OrbType
 	{
@@ -65,63 +63,40 @@ public class ManticoreHandler
 
 	private static class ManticoreData
 	{
-		boolean charged = false;
-		List<OrbType> orbSequence = new ArrayList<>();
-		boolean sequenceComplete = false;
+		List<OrbType> orbOrder = new ArrayList<>();  // Orb order, max 3 entries
+		boolean wasChargedAtReinforcements = false;  // Whether it had any orbs when reinforcements spawned
+
+		boolean isCharged()
+		{
+			return orbOrder.size() >= 3;
+		}
 
 		String getLosSuffix(boolean isMantimayhem3Active)
 		{
-			if (!charged || orbSequence.isEmpty())
+			if (orbOrder.isEmpty())
 			{
 				return "u"; // Uncharged
 			}
 
-			// Check if we have a complete sequence
-			if (sequenceComplete && orbSequence.size() == 3)
+			// With MM3 active and full sequence
+			if (isMantimayhem3Active && orbOrder.size() == 3)
 			{
-				// If third orb is melee, it's a standard sequence
-				boolean isStandardSequence = orbSequence.get(2) == OrbType.MELEE;
-
-				// If it's a standard sequence, abbreviate even with MM3
-				if (isStandardSequence)
+				// If third orb is melee, it's a standard sequence - abbreviate
+				if (orbOrder.get(2) == OrbType.MELEE)
 				{
-					return String.valueOf(orbSequence.get(0).code);
+					return String.valueOf(orbOrder.get(0).code);
 				}
-				else
+				// Non-standard sequence - return full sequence
+				StringBuilder sb = new StringBuilder();
+				for (OrbType orb : orbOrder)
 				{
-					// Non-standard sequence - always return full sequence
-					// (MM3 must be active for non-standard sequences to occur)
-					StringBuilder sb = new StringBuilder();
-					for (OrbType orb : orbSequence)
-					{
-						sb.append(orb.code);
-					}
-					return sb.toString();
+					sb.append(orb.code);
 				}
+				return sb.toString();
 			}
 
-			// If MM3 is active but sequence not complete, return "u"
-			if (isMantimayhem3Active && !sequenceComplete)
-			{
-				return "u";
-			}
-
-			// Without MM3 or with incomplete sequence and no MM3, return first orb
-			return orbSequence.isEmpty() ? "u" : String.valueOf(orbSequence.get(0).code);
-		}
-
-		boolean isCharged()
-		{
-			return charged;
-		}
-
-		ManticoreData copy()
-		{
-			ManticoreData copy = new ManticoreData();
-			copy.charged = this.charged;
-			copy.orbSequence = new ArrayList<>(this.orbSequence);
-			copy.sequenceComplete = this.sequenceComplete;
-			return copy;
+			// Without MM3 or incomplete sequence, return first orb
+			return String.valueOf(orbOrder.get(0).code);
 		}
 	}
 
@@ -134,66 +109,56 @@ public class ManticoreHandler
 			return "u";
 		}
 		String suffix = data.getLosSuffix(isMantimayhem3Active());
-		log.debug("Manticore {} current suffix: {}, charged: {}, sequence: {}, complete: {}",
-			npcIndex, suffix, data.charged, data.orbSequence, data.sequenceComplete);
+		log.debug("Manticore {} current suffix: {}, orb order: {}",
+			npcIndex, suffix, data.orbOrder);
 		return suffix;
 	}
 
 	public String getManticoreSpawnLosSuffix(int npcIndex, boolean isReinforcement)
 	{
-		ManticoreData capturedState = isReinforcement ? reinforcementSpawnStates.get(npcIndex) : initialSpawnStates.get(npcIndex);
-		ManticoreData currentState = manticores.get(npcIndex);
-
-		if (capturedState == null && currentState == null)
+		ManticoreData data = manticores.get(npcIndex);
+		if (data == null)
 		{
+			log.debug("getManticoreSpawnLosSuffix: Manticore {} not found for {} URL", 
+				npcIndex, isReinforcement ? "reinforcement" : "spawn");
 			return "u";
 		}
 
 		boolean isMM3Active = isMantimayhem3Active();
 
-		// If it was uncharged at spawn but now we know its pattern
-		if (capturedState != null && !capturedState.isCharged() && currentState != null && currentState.isCharged())
+		// For reinforcements, check if it was charged at that time
+		if (isReinforcement)
 		{
-			String suffix = currentState.getLosSuffix(isMM3Active);
-			// Only add "u" prefix if we have a valid pattern (not another "u")
-			if (!suffix.equals("u"))
+			if (!data.wasChargedAtReinforcements)
 			{
-				String result = "u" + suffix;
-				log.debug("Manticore {} was uncharged at {}, now charged: {}",
-					npcIndex, isReinforcement ? "reinforcement" : "spawn", result);
-				return result; // e.g., "ur", "um", "urlm"
+				// Was uncharged at reinforcements, but might be charged now or have partial pattern
+				if (data.isCharged() || !data.orbOrder.isEmpty())
+				{
+					String suffix = data.getLosSuffix(isMM3Active);
+					String result = "u" + suffix;
+					log.debug("Manticore {} reinforcement URL: was uncharged at reinf, now has orbs: {}, returning: {}", 
+						npcIndex, data.orbOrder, result);
+					return result; // e.g., "ur", "um", "urmM"
+				}
+				log.debug("Manticore {} reinforcement URL: was uncharged at reinf, still no orbs, returning: u", npcIndex);
+				return "u";
 			}
-		}
-
-		// If it was charged at spawn
-		if (capturedState != null && capturedState.isCharged())
-		{
-			// With MM3, we might have captured a partial pattern but now have the complete pattern
-			if (isMM3Active && currentState != null && currentState.sequenceComplete && !capturedState.sequenceComplete)
-			{
-				// Use the current complete pattern instead of the captured partial pattern
-				String suffix = currentState.getLosSuffix(isMM3Active);
-				log.debug("Manticore {} was partially charged at {}, now complete: {}",
-					npcIndex, isReinforcement ? "reinforcement" : "spawn", suffix);
-				return suffix;
-			}
-
-			String result = capturedState.getLosSuffix(isMM3Active);
-			log.debug("Manticore {} was charged at {}: {}",
-				npcIndex, isReinforcement ? "reinforcement" : "spawn", result);
+			// Was charged at reinforcements
+			String result = data.getLosSuffix(isMM3Active);
+			log.debug("Manticore {} reinforcement URL: was charged at reinf, returning: {}", npcIndex, result);
 			return result;
 		}
-
-		// Otherwise use current state if available
-		if (currentState != null)
+		else
 		{
-			String result = currentState.getLosSuffix(isMM3Active);
-			log.debug("Manticore {} using current state for {}: {}",
-				npcIndex, isReinforcement ? "reinforcement" : "spawn", result);
-			return result;
+			// For initial spawn, manticores are ALWAYS uncharged at spawn
+			// But we might know the pattern now
+			if (data.isCharged() || !data.orbOrder.isEmpty())
+			{
+				String suffix = data.getLosSuffix(isMM3Active);
+				return "u" + suffix; // Always prefix with "u" for spawn
+			}
+			return "u";
 		}
-
-		return "u";
 	}
 
 	public boolean isManticoreUncharged(NPC npc)
@@ -215,8 +180,8 @@ public class ManticoreHandler
 			return false;
 		}
 		// Without MM3, having first orb is enough
-		// With MM3, need complete sequence
-		return !isMantimayhem3Active() ? data.isCharged() : data.sequenceComplete;
+		// With MM3, need full sequence (3 orbs)
+		return !isMantimayhem3Active() ? !data.orbOrder.isEmpty() : data.isCharged();
 	}
 
 	public void setMantimayhem3Active(boolean active)
@@ -232,25 +197,24 @@ public class ManticoreHandler
 	public void clear()
 	{
 		manticores.clear();
-		initialSpawnStates.clear();
-		reinforcementSpawnStates.clear();
 	}
 
 	public void captureSpawnStates(boolean isReinforcement)
 	{
-		Map<Integer, ManticoreData> targetMap = isReinforcement ? reinforcementSpawnStates : initialSpawnStates;
-		targetMap.clear();
-
-		for (Map.Entry<Integer, ManticoreData> entry : manticores.entrySet())
+		if (isReinforcement)
 		{
-			ManticoreData data = entry.getValue().copy();
-			targetMap.put(entry.getKey(), data);
-			log.debug("Captured {} spawn state for manticore {}: charged={}, sequence={}",
-				isReinforcement ? "reinforcement" : "initial",
-				entry.getKey(),
-				data.charged,
-				data.orbSequence);
+			// Mark which manticores had any orbs at reinforcement time
+			for (Map.Entry<Integer, ManticoreData> entry : manticores.entrySet())
+			{
+				ManticoreData data = entry.getValue();
+				// Track if it had ANY orbs at reinforcements, not just fully charged
+				data.wasChargedAtReinforcements = !data.orbOrder.isEmpty();
+				log.debug("Manticore {} had orbs at reinforcements: {} (orb order: {})",
+					entry.getKey(), data.wasChargedAtReinforcements, data.orbOrder);
+			}
 		}
+		// Initial spawn capture doesn't need to do anything special
+		// We'll determine if it was charged at spawn based on whether it's fully charged later
 	}
 
 	public void onNpcSpawned(NPC npc)
@@ -289,10 +253,10 @@ public class ManticoreHandler
 				return;
 			}
 
-			// Only track sequence if we haven't completed it yet
-			if (data.sequenceComplete)
+			// Only track if we haven't reached 3 orbs yet
+			if (data.orbOrder.size() >= 3)
 			{
-				log.debug("Manticore {} already has complete sequence, skipping", index);
+				log.debug("Manticore {} already has 3 orbs, skipping", index);
 				return;
 			}
 
@@ -313,18 +277,14 @@ public class ManticoreHandler
 			if (orbType != null)
 			{
 				// Check if this is a new orb type in the sequence
-				if (data.orbSequence.isEmpty() || data.orbSequence.get(data.orbSequence.size() - 1) != orbType)
+				if (data.orbOrder.isEmpty() || data.orbOrder.get(data.orbOrder.size() - 1) != orbType)
 				{
-					data.orbSequence.add(orbType);
-					data.charged = true;
+					data.orbOrder.add(orbType);
+					log.debug("Manticore {} orb order: {} (MM3: {})", index, data.orbOrder, mantimayhem3Active);
 
-					log.debug("Manticore {} orb sequence: {} (MM3: {})", index, data.orbSequence, mantimayhem3Active);
-
-					// Check if we have a complete sequence
-					if (data.orbSequence.size() >= 3)
+					if (data.orbOrder.size() == 3)
 					{
-						data.sequenceComplete = true;
-						log.debug("Manticore {} sequence complete: {} (MM3: {})", index, data.orbSequence, mantimayhem3Active);
+						log.debug("Manticore {} fully charged with order: {} (MM3: {})", index, data.orbOrder, mantimayhem3Active);
 					}
 				}
 			}

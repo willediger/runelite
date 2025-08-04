@@ -289,8 +289,9 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 		NPC npc = event.getNpc();
 
-		if (isManticore(npc))
+		if (isManticore(npc) && !reinforcementsPhase)
 		{
+			// Only track new manticores during initial spawn, not reinforcements
 			manticoreHandler.onNpcSpawned(npc);
 		}
 
@@ -494,6 +495,8 @@ public class ColosseumWavesPlugin extends Plugin
 		if (isSpawnUrl)
 		{
 			suffix = manticoreHandler.getManticoreSpawnLosSuffix(spawn.getNpcIndex(), isReinforcement);
+			log.debug("Appending manticore {} suffix for {} URL: '{}'", 
+				spawn.getNpcIndex(), isReinforcement ? "reinforcement" : "spawn", suffix);
 		}
 		else
 		{
