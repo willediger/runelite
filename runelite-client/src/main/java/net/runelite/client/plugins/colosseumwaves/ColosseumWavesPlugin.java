@@ -97,6 +97,9 @@ public class ColosseumWavesPlugin extends Plugin
 	@Inject
 	private ManticoreHandler manticoreHandler;
 
+	@Inject
+	private ColosseumWavesLogger cwLog;
+
 	private ColosseumWavesPanel panel;
 	private NavigationButton navButton;
 
@@ -125,6 +128,7 @@ public class ColosseumWavesPlugin extends Plugin
 	protected void startUp() throws Exception
 	{
 		resetState();
+		cwLog.startNewSession();
 
 		panel = injector.getInstance(ColosseumWavesPanel.class);
 
@@ -150,6 +154,7 @@ public class ColosseumWavesPlugin extends Plugin
 		navButton = null;
 
 		resetState();
+		cwLog.closeLog();
 	}
 
 	@Subscribe
@@ -175,12 +180,26 @@ public class ColosseumWavesPlugin extends Plugin
 
 			currentWave = newWave;
 			waveStartTick = client.getTickCount();
+			cwLog.logWaveStart(newWave);
 
 			// Check MM3 status when a new wave starts
 			checkMantimayhem3Status();
 		}
 		else if (waveCompleteMatcher.find())
 		{
+			int completedWave = Integer.parseInt(waveCompleteMatcher.group(1));
+			// Extract duration if it's in the message
+			String fullMessage = event.getMessage();
+			if (fullMessage.contains("duration:"))
+			{
+				int startIdx = fullMessage.indexOf("duration:") + 9;
+				int endIdx = fullMessage.indexOf("</col>", startIdx);
+				if (endIdx > startIdx)
+				{
+					String duration = fullMessage.substring(startIdx, endIdx).replace("<col=ff3045>", "").trim();
+					cwLog.logWaveComplete(completedWave, duration);
+				}
+			}
 			clearCurrentWaveState();
 		}
 	}
@@ -201,9 +220,11 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			resetState();
 			inColosseum = true;
+			cwLog.logColosseumEntered();
 		}
 		else if (inColosseum && !isInColosseum())
 		{
+			cwLog.logColosseumExited();
 			resetState();
 		}
 
@@ -215,6 +236,7 @@ public class ColosseumWavesPlugin extends Plugin
 			{
 				reinforcementsPhase = true;
 				npcsCaptured = false;
+				cwLog.logReinforcementsPhase();
 			}
 		}
 
@@ -311,12 +333,31 @@ public class ColosseumWavesPlugin extends Plugin
 					waveSpawns.clear();
 					waveSpawns.addAll(spawns);
 					manticoreHandler.captureSpawnStates(false);
+					// Log initial spawns
+					for (NpcSpawn spawn : spawns)
+					{
+						Point losPos = convertToLoSCoordinates(spawn.getLocation());
+						if (spawn.getNpcId() == NpcID.COLOSSEUM_MANTICORE)
+						{
+							cwLog.logManticoreSpawn(spawn.getNpcIndex(), spawn.getLocation(), losPos);
+						}
+						else
+						{
+							cwLog.logNpcSpawn("Initial", spawn.getNpcId(), spawn.getNpcIndex(), spawn.getLocation(), losPos);
+						}
+					}
 				}
 				else
 				{
 					reinforcementSpawns.clear();
 					reinforcementSpawns.addAll(spawns);
 					manticoreHandler.captureSpawnStates(true);
+					// Log reinforcement spawns
+					for (NpcSpawn spawn : spawns)
+					{
+						Point losPos = convertToLoSCoordinates(spawn.getLocation());
+						cwLog.logNpcSpawn("Reinforcement", spawn.getNpcId(), spawn.getNpcIndex(), spawn.getLocation(), losPos);
+					}
 				}
 
 				npcsCaptured = true;
@@ -353,13 +394,25 @@ public class ColosseumWavesPlugin extends Plugin
 			NPC npc = (NPC) event.getActor();
 			if (isManticore(npc))
 			{
+				// Log that we received a graphics event for this manticore
+				cwLog.logDebug(String.format("GraphicChanged event for Manticore %d, graphic: %d", 
+					npc.getIndex(), npc.getGraphic()));
+				
 				boolean hadIncompletePattern = !manticoreHandler.hasCompletePattern(npc.getIndex());
 				manticoreHandler.checkNPCGraphics(npc);
 				boolean hasCompletePatternNow = manticoreHandler.hasCompletePattern(npc.getIndex());
 
 				if (hadIncompletePattern && hasCompletePatternNow)
 				{
-					log.debug("Manticore {} pattern complete, updating URLs", npc.getIndex());
+					cwLog.logDebug(String.format("Manticore %d pattern complete, updating URLs", npc.getIndex()));
+					long spawnManticores = waveSpawns.stream()
+						.filter(s -> s.getNpcId() == NpcID.COLOSSEUM_MANTICORE)
+						.count();
+					long reinfManticores = reinforcementSpawns.stream()
+						.filter(s -> s.getNpcId() == NpcID.COLOSSEUM_MANTICORE)
+						.count();
+					cwLog.logDebug(String.format("Wave spawns contain %d manticores, Reinforcement spawns contain %d manticores",
+						spawnManticores, reinfManticores));
 					// Update both spawn and reinforcement URLs if they contain this manticore
 					boolean manticoreInInitialSpawn = false;
 					boolean manticoreInReinforcement = false;
@@ -406,13 +459,14 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 			{
+				Point currentPos = getNPCSceneLocation(npc);
+
 				// Ensure manticores are tracked in the handler
 				if (isManticore(npc))
 				{
 					manticoreHandler.ensureManticoreTracked(npc);
 				}
 
-				Point currentPos = getNPCSceneLocation(npc);
 				activeNPCs.add(new NpcSpawn(npc.getId(), currentPos, npc.getIndex()));
 			}
 		}
@@ -448,6 +502,7 @@ public class ColosseumWavesPlugin extends Plugin
 				if (config.includePlayerLocationSpawns())
 				{
 					playerLocationAtWaveSpawn = getPlayerLoSLocation();
+					cwLog.logPlayerLocation("initial spawn", playerLocationAtWaveSpawn);
 				}
 				panel.addWave(currentWave);
 				updateCurrentWaveUrl(false);
@@ -460,6 +515,7 @@ public class ColosseumWavesPlugin extends Plugin
 				if (config.includePlayerLocationReinforcements())
 				{
 					playerLocationAtReinforcements = getPlayerLoSLocation();
+					cwLog.logPlayerLocation("reinforcements", playerLocationAtReinforcements);
 				}
 				updateCurrentWaveUrl(true);
 			}
@@ -481,7 +537,9 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLoSLocation() : null;
-		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
+		String url = buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
+		cwLog.logUrlGenerated("Current LoS", currentWave, url);
+		return url;
 	}
 
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NpcSpawn spawn, boolean isSpawnUrl, boolean isReinforcement)
@@ -495,8 +553,7 @@ public class ColosseumWavesPlugin extends Plugin
 		if (isSpawnUrl)
 		{
 			suffix = manticoreHandler.getManticoreSpawnLosSuffix(spawn.getNpcIndex(), isReinforcement);
-			log.debug("Appending manticore {} suffix for {} URL: '{}'", 
-				spawn.getNpcIndex(), isReinforcement ? "reinforcement" : "spawn", suffix);
+			cwLog.logManticoreSuffix(spawn.getNpcIndex(), isReinforcement ? "reinforcement" : "spawn", suffix);
 		}
 		else
 		{
@@ -561,7 +618,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 			String url = buildLoSUrl(spawns, includePlayer, playerLocation, true, false);
 			panel.setWaveSpawnUrl(currentWave, url);
-			log.debug("Updated wave {} spawn URL: {}", currentWave, url);
+			cwLog.logUrlGenerated("spawn", currentWave, url);
 		}
 		else
 		{
@@ -575,7 +632,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 			String url = buildLoSUrl(spawns, includePlayer, playerLocation, true, true);
 			panel.setWaveReinforcementUrl(currentWave, url);
-			log.debug("Updated wave {} reinforcement URL: {}", currentWave, url);
+			cwLog.logUrlGenerated("reinforcement", currentWave, url);
 		}
 	}
 
@@ -610,8 +667,8 @@ public class ColosseumWavesPlugin extends Plugin
 		// Only log when status changes
 		if (mantimayhem3Active != mm3Active)
 		{
-			log.debug("Mantimayhem III status changed: {} (varbit value: {})", mm3Active, mantimayhemlevel);
 			mantimayhem3Active = mm3Active;
+			cwLog.logMantimayhem3Status(mm3Active);
 			// Also update the handler so it knows the current MM3 status
 			manticoreHandler.setMantimayhem3Active(mm3Active);
 		}

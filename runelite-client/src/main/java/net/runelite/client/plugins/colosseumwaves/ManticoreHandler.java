@@ -42,6 +42,9 @@ public class ManticoreHandler
 	@Inject
 	private Client client;
 
+	@Inject
+	private ColosseumWavesLogger cwLog;
+
 	private boolean mantimayhem3Active = false;
 
 	private static final int MAGIC_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_MAGIC_01;
@@ -109,8 +112,6 @@ public class ManticoreHandler
 			return "u";
 		}
 		String suffix = data.getLosSuffix(isMantimayhem3Active());
-		log.debug("Manticore {} current suffix: {}, orb order: {}",
-			npcIndex, suffix, data.orbOrder);
 		return suffix;
 	}
 
@@ -119,8 +120,8 @@ public class ManticoreHandler
 		ManticoreData data = manticores.get(npcIndex);
 		if (data == null)
 		{
-			log.debug("getManticoreSpawnLosSuffix: Manticore {} not found for {} URL", 
-				npcIndex, isReinforcement ? "reinforcement" : "spawn");
+			cwLog.logError(String.format("Manticore %d not found for %s URL",
+				npcIndex, isReinforcement ? "reinforcement" : "spawn"));
 			return "u";
 		}
 
@@ -135,18 +136,12 @@ public class ManticoreHandler
 				if (data.isCharged() || !data.orbOrder.isEmpty())
 				{
 					String suffix = data.getLosSuffix(isMM3Active);
-					String result = "u" + suffix;
-					log.debug("Manticore {} reinforcement URL: was uncharged at reinf, now has orbs: {}, returning: {}", 
-						npcIndex, data.orbOrder, result);
-					return result; // e.g., "ur", "um", "urmM"
+					return "u" + suffix; // e.g., "ur", "um", "urmM"
 				}
-				log.debug("Manticore {} reinforcement URL: was uncharged at reinf, still no orbs, returning: u", npcIndex);
 				return "u";
 			}
 			// Was charged at reinforcements
-			String result = data.getLosSuffix(isMM3Active);
-			log.debug("Manticore {} reinforcement URL: was charged at reinf, returning: {}", npcIndex, result);
-			return result;
+			return data.getLosSuffix(isMM3Active);
 		}
 		else
 		{
@@ -184,6 +179,12 @@ public class ManticoreHandler
 		return !isMantimayhem3Active() ? !data.orbOrder.isEmpty() : data.isCharged();
 	}
 
+	public int getOrbCount(int npcIndex)
+	{
+		ManticoreData data = manticores.get(npcIndex);
+		return data == null ? 0 : data.orbOrder.size();
+	}
+
 	public void setMantimayhem3Active(boolean active)
 	{
 		this.mantimayhem3Active = active;
@@ -209,8 +210,9 @@ public class ManticoreHandler
 				ManticoreData data = entry.getValue();
 				// Track if it had ANY orbs at reinforcements, not just fully charged
 				data.wasChargedAtReinforcements = !data.orbOrder.isEmpty();
-				log.debug("Manticore {} had orbs at reinforcements: {} (orb order: {})",
-					entry.getKey(), data.wasChargedAtReinforcements, data.orbOrder);
+				cwLog.logManticoreStateAtReinforcements(entry.getKey(),
+					data.wasChargedAtReinforcements,
+					data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
 			}
 		}
 		// Initial spawn capture doesn't need to do anything special
@@ -230,7 +232,7 @@ public class ManticoreHandler
 		if (!manticores.containsKey(index))
 		{
 			manticores.put(index, new ManticoreData());
-			log.debug("Added manticore {} to tracking (was not caught by spawn event)", index);
+			cwLog.logDebug("Added manticore " + index + " to tracking (was not caught by spawn event)");
 		}
 	}
 
@@ -243,20 +245,27 @@ public class ManticoreHandler
 	public void checkNPCGraphics(NPC npc)
 	{
 		int graphic = npc.getGraphic();
+		int index = npc.getIndex();
+
+		// Log all graphics events for manticores for debugging
+		if (graphic != -1)
+		{
+			cwLog.logDebug(String.format("Manticore %d: GraphicChanged event, graphic ID: %d", index, graphic));
+		}
 
 		if (graphic == MAGIC_ORB_GRAPHIC_ID || graphic == RANGED_ORB_GRAPHIC_ID || graphic == MELEE_ORB_GRAPHIC_ID)
 		{
-			int index = npc.getIndex();
 			ManticoreData data = manticores.get(index);
 			if (data == null)
 			{
+				cwLog.logError(String.format("Manticore %d: Orb graphic detected but manticore not in tracking map!", index));
 				return;
 			}
 
 			// Only track if we haven't reached 3 orbs yet
 			if (data.orbOrder.size() >= 3)
 			{
-				log.debug("Manticore {} already has 3 orbs, skipping", index);
+				cwLog.logManticoreAlreadyCharged(index);
 				return;
 			}
 
@@ -280,12 +289,20 @@ public class ManticoreHandler
 				if (data.orbOrder.isEmpty() || data.orbOrder.get(data.orbOrder.size() - 1) != orbType)
 				{
 					data.orbOrder.add(orbType);
-					log.debug("Manticore {} orb order: {} (MM3: {})", index, data.orbOrder, mantimayhem3Active);
+					cwLog.logManticoreOrbDetected(index, orbType.name(),
+						data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
 
 					if (data.orbOrder.size() == 3)
 					{
-						log.debug("Manticore {} fully charged with order: {} (MM3: {})", index, data.orbOrder, mantimayhem3Active);
+						cwLog.logManticoreFullyCharged(index,
+							data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
 					}
+				}
+				else
+				{
+					// Log when we detect the same orb type consecutively (repeat)
+					cwLog.logDebug(String.format("Manticore %d: Repeat orb detected (same as previous): %s, Current order: %s", 
+						index, orbType.name(), data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList())));
 				}
 			}
 		}
