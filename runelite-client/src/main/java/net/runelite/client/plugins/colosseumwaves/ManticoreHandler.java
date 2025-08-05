@@ -236,12 +236,6 @@ public class ManticoreHandler
 		}
 	}
 
-	public void onNpcDespawned(NPC npc)
-	{
-		int index = npc.getIndex();
-		manticores.remove(index);
-	}
-
 	public void checkNPCGraphics(NPC npc)
 	{
 		int graphic = npc.getGraphic();
@@ -301,7 +295,7 @@ public class ManticoreHandler
 				else
 				{
 					// Log when we detect the same orb type consecutively (repeat)
-					cwLog.logDebug(String.format("Manticore %d: Repeat orb detected (same as previous): %s, Current order: %s", 
+					cwLog.logDebug(String.format("Manticore %d: Repeat orb detected (same as previous): %s, Current order: %s",
 						index, orbType.name(), data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList())));
 				}
 			}

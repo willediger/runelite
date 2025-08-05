@@ -47,7 +47,6 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GraphicChanged;
-import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.client.config.ConfigManager;
@@ -366,22 +365,6 @@ public class ColosseumWavesPlugin extends Plugin
 	}
 
 	@Subscribe
-	public void onNpcDespawned(NpcDespawned event)
-	{
-		if (!inColosseum)
-		{
-			return;
-		}
-
-		NPC npc = event.getNpc();
-		if (isManticore(npc))
-		{
-			manticoreHandler.onNpcDespawned(npc);
-		}
-	}
-
-
-	@Subscribe
 	public void onGraphicChanged(GraphicChanged event)
 	{
 		if (!inColosseum)
@@ -395,9 +378,9 @@ public class ColosseumWavesPlugin extends Plugin
 			if (isManticore(npc))
 			{
 				// Log that we received a graphics event for this manticore
-				cwLog.logDebug(String.format("GraphicChanged event for Manticore %d, graphic: %d", 
+				cwLog.logDebug(String.format("GraphicChanged event for Manticore %d, graphic: %d",
 					npc.getIndex(), npc.getGraphic()));
-				
+
 				boolean hadIncompletePattern = !manticoreHandler.hasCompletePattern(npc.getIndex());
 				manticoreHandler.checkNPCGraphics(npc);
 				boolean hasCompletePatternNow = manticoreHandler.hasCompletePattern(npc.getIndex());
