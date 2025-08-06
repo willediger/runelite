@@ -95,9 +95,6 @@ public class ColosseumWavesPlugin extends Plugin
 	@Inject
 	private ManticoreHandler manticoreHandler;
 
-	@Inject
-	private ColosseumWavesLogger cwLog;
-
 	private ColosseumWavesPanel panel;
 	private NavigationButton navButton;
 
@@ -126,7 +123,6 @@ public class ColosseumWavesPlugin extends Plugin
 	protected void startUp() throws Exception
 	{
 		resetState();
-		cwLog.startNewSession();
 
 		panel = injector.getInstance(ColosseumWavesPanel.class);
 
@@ -155,7 +151,6 @@ public class ColosseumWavesPlugin extends Plugin
 		navButton = null;
 
 		resetState();
-		cwLog.closeLog();
 	}
 
 	@Subscribe
@@ -181,7 +176,6 @@ public class ColosseumWavesPlugin extends Plugin
 
 			currentWave = newWave;
 			waveStartTick = client.getTickCount();
-			cwLog.logWaveStart(newWave);
 
 			// Check MM3 status when a new wave starts
 			checkMantimayhem3Status();
@@ -198,7 +192,6 @@ public class ColosseumWavesPlugin extends Plugin
 				if (endIdx > startIdx)
 				{
 					String duration = fullMessage.substring(startIdx, endIdx).replace("<col=ff3045>", "").trim();
-					cwLog.logWaveComplete(completedWave, duration);
 				}
 			}
 			clearCurrentWaveState();
@@ -221,11 +214,9 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			resetState();
 			inColosseum = true;
-			cwLog.logColosseumEntered();
 		}
 		else if (inColosseum && !isInColosseum())
 		{
-			cwLog.logColosseumExited();
 			resetState();
 		}
 
@@ -237,7 +228,6 @@ public class ColosseumWavesPlugin extends Plugin
 			{
 				reinforcementsPhase = true;
 				npcsCaptured = false;
-				cwLog.logReinforcementsPhase();
 			}
 		}
 
@@ -343,14 +333,7 @@ public class ColosseumWavesPlugin extends Plugin
 					for (NpcSpawn spawn : spawns)
 					{
 						Point losPos = convertToLoSCoordinates(spawn.getLocation());
-						if (spawn.getNpcId() == NpcID.COLOSSEUM_MANTICORE)
-						{
-							cwLog.logManticoreSpawn(spawn.getNpcIndex(), spawn.getLocation(), losPos);
-						}
-						else
-						{
-							cwLog.logNpcSpawn("Initial", spawn.getNpcId(), spawn.getNpcIndex(), spawn.getLocation(), losPos);
-						}
+						// NPC spawn logging removed
 					}
 				}
 				else
@@ -358,12 +341,7 @@ public class ColosseumWavesPlugin extends Plugin
 					reinforcementSpawns.clear();
 					reinforcementSpawns.addAll(spawns);
 					manticoreHandler.captureSpawnStates(true);
-					// Log reinforcement spawns
-					for (NpcSpawn spawn : spawns)
-					{
-						Point losPos = convertToLoSCoordinates(spawn.getLocation());
-						cwLog.logNpcSpawn("Reinforcement", spawn.getNpcId(), spawn.getNpcIndex(), spawn.getLocation(), losPos);
-					}
+					// Reinforcement spawn logging removed
 				}
 
 				npcsCaptured = true;
@@ -449,7 +427,6 @@ public class ColosseumWavesPlugin extends Plugin
 				if (config.includePlayerLocationSpawns())
 				{
 					playerLocationAtWaveSpawn = getPlayerLoSLocation();
-					cwLog.logPlayerLocation("initial spawn", playerLocationAtWaveSpawn);
 				}
 				panel.addWave(currentWave);
 				updateCurrentWaveUrl(false);
@@ -462,7 +439,6 @@ public class ColosseumWavesPlugin extends Plugin
 				if (config.includePlayerLocationReinforcements())
 				{
 					playerLocationAtReinforcements = getPlayerLoSLocation();
-					cwLog.logPlayerLocation("reinforcements", playerLocationAtReinforcements);
 				}
 				updateCurrentWaveUrl(true);
 			}
@@ -484,9 +460,7 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLoSLocation() : null;
-		String url = buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
-		cwLog.logUrlGenerated("Current LoS", currentWave, url);
-		return url;
+		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
 	}
 
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NpcSpawn spawn, boolean isSpawnUrl, boolean isReinforcement)
@@ -500,7 +474,6 @@ public class ColosseumWavesPlugin extends Plugin
 		if (isSpawnUrl)
 		{
 			suffix = manticoreHandler.getManticoreSpawnLosSuffix(spawn.getNpcIndex(), isReinforcement);
-			cwLog.logManticoreSuffix(spawn.getNpcIndex(), isReinforcement ? "reinforcement" : "spawn", suffix);
 		}
 		else
 		{
@@ -565,7 +538,6 @@ public class ColosseumWavesPlugin extends Plugin
 
 			String url = buildLoSUrl(spawns, includePlayer, playerLocation, true, false);
 			panel.setWaveSpawnUrl(currentWave, url);
-			cwLog.logUrlGenerated("spawn", currentWave, url);
 		}
 		else
 		{
@@ -579,7 +551,6 @@ public class ColosseumWavesPlugin extends Plugin
 
 			String url = buildLoSUrl(spawns, includePlayer, playerLocation, true, true);
 			panel.setWaveReinforcementUrl(currentWave, url);
-			cwLog.logUrlGenerated("reinforcement", currentWave, url);
 		}
 	}
 
@@ -615,7 +586,6 @@ public class ColosseumWavesPlugin extends Plugin
 		if (mantimayhem3Active != mm3Active)
 		{
 			mantimayhem3Active = mm3Active;
-			cwLog.logMantimayhem3Status(mm3Active);
 			// Also update the handler so it knows the current MM3 status
 			manticoreHandler.setMantimayhem3Active(mm3Active);
 		}

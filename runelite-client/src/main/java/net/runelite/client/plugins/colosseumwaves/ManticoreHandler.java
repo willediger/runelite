@@ -42,8 +42,6 @@ public class ManticoreHandler
 	@Inject
 	private Client client;
 
-	@Inject
-	private ColosseumWavesLogger cwLog;
 
 	// Callback for when a manticore pattern is completed
 	private Runnable onPatternCompleteCallback;
@@ -124,8 +122,7 @@ public class ManticoreHandler
 		ManticoreData data = manticores.get(npcIndex);
 		if (data == null)
 		{
-			cwLog.logError(String.format("Manticore %d not found for %s URL",
-				npcIndex, isReinforcement ? "reinforcement" : "spawn"));
+			log.debug("Manticore {} not found for {} URL", npcIndex, isReinforcement ? "reinforcement" : "spawn");
 			return "u";
 		}
 
@@ -214,9 +211,6 @@ public class ManticoreHandler
 				ManticoreData data = entry.getValue();
 				// Track if it had ANY orbs at reinforcements, not just fully charged
 				data.wasChargedAtReinforcements = !data.orbOrder.isEmpty();
-				cwLog.logManticoreStateAtReinforcements(entry.getKey(),
-					data.wasChargedAtReinforcements,
-					data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
 			}
 		}
 	}
@@ -227,7 +221,6 @@ public class ManticoreHandler
 		ManticoreData data = new ManticoreData();
 		data.lastCheckedGraphic = npc.getGraphic(); // Store initial graphic state
 		manticores.put(index, data);
-		cwLog.logDebug("Manticore " + index + " spawned with initial graphic: " + data.lastCheckedGraphic);
 	}
 
 	public void ensureManticoreTracked(NPC npc)
@@ -239,7 +232,6 @@ public class ManticoreHandler
 			ManticoreData data = new ManticoreData();
 			data.lastCheckedGraphic = npc.getGraphic();
 			manticores.put(index, data);
-			cwLog.logDebug("Added manticore " + index + " to tracking (was not caught by spawn event), initial graphic: " + data.lastCheckedGraphic);
 		}
 	}
 
@@ -253,14 +245,14 @@ public class ManticoreHandler
 			ManticoreData data = manticores.get(index);
 			if (data == null)
 			{
-				cwLog.logError(String.format("Manticore %d: Orb graphic detected but manticore not in tracking map!", index));
+				// Manticore not in tracking map
 				return;
 			}
 
 			// Only track if we haven't reached 3 orbs yet
 			if (data.orbOrder.size() >= 3)
 			{
-				cwLog.logManticoreAlreadyCharged(index);
+				// Manticore already charged
 				return;
 			}
 
@@ -285,19 +277,10 @@ public class ManticoreHandler
 				{
 					boolean wasIncomplete = !hasCompletePattern(index);
 					data.orbOrder.add(orbType);
-					cwLog.logManticoreOrbDetected(index, orbType.name(),
-						data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
-
-					if (data.orbOrder.size() == 3)
-					{
-						cwLog.logManticoreFullyCharged(index,
-							data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
-					}
 
 					// Check if pattern just became complete
 					if (wasIncomplete && hasCompletePattern(index))
 					{
-						cwLog.logDebug(String.format("Manticore %d pattern complete, triggering URL update", index));
 						if (onPatternCompleteCallback != null)
 						{
 							onPatternCompleteCallback.run();

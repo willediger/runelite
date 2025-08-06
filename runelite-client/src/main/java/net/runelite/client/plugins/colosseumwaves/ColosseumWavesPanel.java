@@ -64,18 +64,16 @@ public class ColosseumWavesPanel extends PluginPanel
 
 	private final ColosseumWavesPlugin plugin;
 	private final ClientThread clientThread;
-	private final ColosseumWavesLogger cwLog;
 
 	private final JPanel wavesContainer;
 	private final List<WavePanel> wavePanels = new ArrayList<>();
 
 	@Inject
-	public ColosseumWavesPanel(final ColosseumWavesPlugin plugin, final ClientThread clientThread, final ColosseumWavesLogger cwLog)
+	public ColosseumWavesPanel(final ColosseumWavesPlugin plugin, final ClientThread clientThread)
 	{
 		super(false);
 		this.plugin = plugin;
 		this.clientThread = clientThread;
-		this.cwLog = cwLog;
 
 		setBackground(BG_COLOR);
 		setLayout(new BorderLayout());
@@ -91,7 +89,6 @@ public class ColosseumWavesPanel extends PluginPanel
 			String url = plugin.generateCurrentLoSLink();
 			if (url != null)
 			{
-				cwLog.logButtonAction("Current LoS clicked - URL: " + url);
 				SwingUtilities.invokeLater(() -> LinkBrowser.browse(url));
 			}
 		}));
@@ -213,7 +210,6 @@ public class ColosseumWavesPanel extends PluginPanel
 			this.spawnUrl = url;
 			enableButton(spawnButton, () ->
 			{
-				cwLog.logButtonAction(String.format("Wave %d Spawn clicked - URL: %s", waveNumber, url));
 				LinkBrowser.browse(url);
 			});
 		}
@@ -224,7 +220,6 @@ public class ColosseumWavesPanel extends PluginPanel
 			reinfButton.setVisible(true);
 			enableButton(reinfButton, () ->
 			{
-				cwLog.logButtonAction(String.format("Wave %d Reinforcements clicked - URL: %s", waveNumber, url));
 				LinkBrowser.browse(url);
 			});
 		}
