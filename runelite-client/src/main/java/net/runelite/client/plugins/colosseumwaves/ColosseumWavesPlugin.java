@@ -46,7 +46,6 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.GraphicChanged;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.client.config.ConfigManager;
@@ -141,6 +140,9 @@ public class ColosseumWavesPlugin extends Plugin
 			.build();
 
 		clientToolbar.addNavigation(navButton);
+
+		// Set up callback for when manticore patterns are completed
+		manticoreHandler.setOnPatternCompleteCallback(this::onManticorePatternComplete);
 	}
 
 	@Override
@@ -245,7 +247,12 @@ public class ColosseumWavesPlugin extends Plugin
 			npcsCaptured = false;
 		}
 
-		// No need to check MM3 on every tick
+		// Check all manticores for graphic changes every tick
+		// This is more reliable than GraphicChanged events which may not fire when NPCs are behind pillars
+		if (inColosseum && currentWave > 0)
+		{
+			manticoreHandler.checkAllManticores();
+		}
 	}
 
 	private Point getPlayerLoSLocation()
@@ -364,72 +371,29 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
-	@Subscribe
-	public void onGraphicChanged(GraphicChanged event)
+	// We no longer need the GraphicChanged event handler since we're polling every tick
+	// This approach is more reliable for detecting manticore charges behind pillars
+
+	private void onManticorePatternComplete()
 	{
-		if (!inColosseum)
+		// Update URLs when a manticore pattern becomes complete
+		if (!waveSpawns.isEmpty())
 		{
-			return;
+			boolean hasManticore = waveSpawns.stream()
+				.anyMatch(s -> s.getNpcId() == NpcID.COLOSSEUM_MANTICORE);
+			if (hasManticore)
+			{
+				updateCurrentWaveUrl(false);
+			}
 		}
 
-		if (event.getActor() instanceof NPC)
+		if (!reinforcementSpawns.isEmpty())
 		{
-			NPC npc = (NPC) event.getActor();
-			if (isManticore(npc))
+			boolean hasManticore = reinforcementSpawns.stream()
+				.anyMatch(s -> s.getNpcId() == NpcID.COLOSSEUM_MANTICORE);
+			if (hasManticore)
 			{
-				// Log that we received a graphics event for this manticore
-				cwLog.logDebug(String.format("GraphicChanged event for Manticore %d, graphic: %d",
-					npc.getIndex(), npc.getGraphic()));
-
-				boolean hadIncompletePattern = !manticoreHandler.hasCompletePattern(npc.getIndex());
-				manticoreHandler.checkNPCGraphics(npc);
-				boolean hasCompletePatternNow = manticoreHandler.hasCompletePattern(npc.getIndex());
-
-				if (hadIncompletePattern && hasCompletePatternNow)
-				{
-					cwLog.logDebug(String.format("Manticore %d pattern complete, updating URLs", npc.getIndex()));
-					long spawnManticores = waveSpawns.stream()
-						.filter(s -> s.getNpcId() == NpcID.COLOSSEUM_MANTICORE)
-						.count();
-					long reinfManticores = reinforcementSpawns.stream()
-						.filter(s -> s.getNpcId() == NpcID.COLOSSEUM_MANTICORE)
-						.count();
-					cwLog.logDebug(String.format("Wave spawns contain %d manticores, Reinforcement spawns contain %d manticores",
-						spawnManticores, reinfManticores));
-					// Update both spawn and reinforcement URLs if they contain this manticore
-					boolean manticoreInInitialSpawn = false;
-					boolean manticoreInReinforcement = false;
-
-					// Check if this manticore is in initial spawns
-					for (NpcSpawn spawn : waveSpawns)
-					{
-						if (spawn.getNpcId() == NpcID.COLOSSEUM_MANTICORE && spawn.getNpcIndex() == npc.getIndex())
-						{
-							manticoreInInitialSpawn = true;
-							break;
-						}
-					}
-
-					// Check if this manticore is in reinforcements
-					for (NpcSpawn spawn : reinforcementSpawns)
-					{
-						if (spawn.getNpcId() == NpcID.COLOSSEUM_MANTICORE && spawn.getNpcIndex() == npc.getIndex())
-						{
-							manticoreInReinforcement = true;
-							break;
-						}
-					}
-
-					// Update URLs as needed
-					if (manticoreInInitialSpawn)
-					{
-						updateCurrentWaveUrl(false);
-					}
-					if (manticoreInReinforcement)
-					{
-						updateCurrentWaveUrl(true);
-					}
-				}
+				updateCurrentWaveUrl(true);
 			}
 		}
 	}

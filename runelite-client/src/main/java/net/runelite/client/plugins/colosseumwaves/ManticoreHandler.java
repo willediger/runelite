@@ -45,6 +45,9 @@ public class ManticoreHandler
 	@Inject
 	private ColosseumWavesLogger cwLog;
 
+	// Callback for when a manticore pattern is completed
+	private Runnable onPatternCompleteCallback;
+
 	private boolean mantimayhem3Active = false;
 
 	private static final int MAGIC_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_MAGIC_01;
@@ -68,6 +71,7 @@ public class ManticoreHandler
 	{
 		List<OrbType> orbOrder = new ArrayList<>();  // Orb order, max 3 entries
 		boolean wasChargedAtReinforcements = false;  // Whether it had any orbs when reinforcements spawned
+		int lastCheckedGraphic = -1;  // Track the last graphic we checked
 
 		boolean isCharged()
 		{
@@ -215,14 +219,15 @@ public class ManticoreHandler
 					data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
 			}
 		}
-		// Initial spawn capture doesn't need to do anything special
-		// We'll determine if it was charged at spawn based on whether it's fully charged later
 	}
 
 	public void onNpcSpawned(NPC npc)
 	{
 		int index = npc.getIndex();
-		manticores.put(index, new ManticoreData());
+		ManticoreData data = new ManticoreData();
+		data.lastCheckedGraphic = npc.getGraphic(); // Store initial graphic state
+		manticores.put(index, data);
+		cwLog.logDebug("Manticore " + index + " spawned with initial graphic: " + data.lastCheckedGraphic);
 	}
 
 	public void ensureManticoreTracked(NPC npc)
@@ -231,8 +236,10 @@ public class ManticoreHandler
 		// Only add if not already tracked
 		if (!manticores.containsKey(index))
 		{
-			manticores.put(index, new ManticoreData());
-			cwLog.logDebug("Added manticore " + index + " to tracking (was not caught by spawn event)");
+			ManticoreData data = new ManticoreData();
+			data.lastCheckedGraphic = npc.getGraphic();
+			manticores.put(index, data);
+			cwLog.logDebug("Added manticore " + index + " to tracking (was not caught by spawn event), initial graphic: " + data.lastCheckedGraphic);
 		}
 	}
 
@@ -240,12 +247,6 @@ public class ManticoreHandler
 	{
 		int graphic = npc.getGraphic();
 		int index = npc.getIndex();
-
-		// Log all graphics events for manticores for debugging
-		if (graphic != -1)
-		{
-			cwLog.logDebug(String.format("Manticore %d: GraphicChanged event, graphic ID: %d", index, graphic));
-		}
 
 		if (graphic == MAGIC_ORB_GRAPHIC_ID || graphic == RANGED_ORB_GRAPHIC_ID || graphic == MELEE_ORB_GRAPHIC_ID)
 		{
@@ -282,6 +283,7 @@ public class ManticoreHandler
 				// Check if this is a new orb type in the sequence
 				if (data.orbOrder.isEmpty() || data.orbOrder.get(data.orbOrder.size() - 1) != orbType)
 				{
+					boolean wasIncomplete = !hasCompletePattern(index);
 					data.orbOrder.add(orbType);
 					cwLog.logManticoreOrbDetected(index, orbType.name(),
 						data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
@@ -291,14 +293,52 @@ public class ManticoreHandler
 						cwLog.logManticoreFullyCharged(index,
 							data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList()));
 					}
+
+					// Check if pattern just became complete
+					if (wasIncomplete && hasCompletePattern(index))
+					{
+						cwLog.logDebug(String.format("Manticore %d pattern complete, triggering URL update", index));
+						if (onPatternCompleteCallback != null)
+						{
+							onPatternCompleteCallback.run();
+						}
+					}
 				}
-				else
+			}
+
+			// Store the last checked graphic
+			data.lastCheckedGraphic = graphic;
+		}
+	}
+
+	public void checkAllManticores()
+	{
+		for (NPC npc : client.getNpcs())
+		{
+			if (npc.getId() != net.runelite.api.gameval.NpcID.COLOSSEUM_MANTICORE)
+			{
+				continue;
+			}
+
+			int index = npc.getIndex();
+			ManticoreData data = manticores.get(index);
+
+			if (data != null)
+			{
+				int currentGraphic = npc.getGraphic();
+
+				// Check if the graphic changed from what we last saw
+				if (currentGraphic != data.lastCheckedGraphic)
 				{
-					// Log when we detect the same orb type consecutively (repeat)
-					cwLog.logDebug(String.format("Manticore %d: Repeat orb detected (same as previous): %s, Current order: %s",
-						index, orbType.name(), data.orbOrder.stream().map(o -> o.name()).collect(java.util.stream.Collectors.toList())));
+					// Process the new graphic
+					checkNPCGraphics(npc);
 				}
 			}
 		}
+	}
+
+	public void setOnPatternCompleteCallback(Runnable callback)
+	{
+		this.onPatternCompleteCallback = callback;
 	}
 }
