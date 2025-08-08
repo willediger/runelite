@@ -26,11 +26,14 @@ package net.runelite.client.plugins.colosseumwaves;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.ActorSpotAnim;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.gameval.SpotanimID;
@@ -69,7 +72,7 @@ public class ManticoreHandler
 	{
 		List<OrbType> orbOrder = new ArrayList<>();  // Orb order, max 3 entries
 		boolean wasChargedAtReinforcements = false;  // Whether it had any orbs when reinforcements spawned
-		int lastCheckedGraphic = -1;  // Track the last graphic we checked
+		Set<Integer> lastSpotAnims = new HashSet<>();  // Track the last set of spot anims we saw
 
 		boolean isCharged()
 		{
@@ -219,7 +222,14 @@ public class ManticoreHandler
 	{
 		int index = npc.getIndex();
 		ManticoreData data = new ManticoreData();
-		data.lastCheckedGraphic = npc.getGraphic(); // Store initial graphic state
+		// Initialize with current spot anims
+		for (ActorSpotAnim spotAnim : npc.getSpotAnims())
+		{
+			if (spotAnim != null)
+			{
+				data.lastSpotAnims.add(spotAnim.getId());
+			}
+		}
 		manticores.put(index, data);
 	}
 
@@ -230,67 +240,98 @@ public class ManticoreHandler
 		if (!manticores.containsKey(index))
 		{
 			ManticoreData data = new ManticoreData();
-			data.lastCheckedGraphic = npc.getGraphic();
+			// Initialize with current spot anims
+			for (ActorSpotAnim spotAnim : npc.getSpotAnims())
+			{
+				if (spotAnim != null)
+				{
+					data.lastSpotAnims.add(spotAnim.getId());
+				}
+			}
 			manticores.put(index, data);
 		}
 	}
 
 	public void checkNPCGraphics(NPC npc)
 	{
-		int graphic = npc.getGraphic();
 		int index = npc.getIndex();
-
-		if (graphic == MAGIC_ORB_GRAPHIC_ID || graphic == RANGED_ORB_GRAPHIC_ID || graphic == MELEE_ORB_GRAPHIC_ID)
+		ManticoreData data = manticores.get(index);
+		if (data == null)
 		{
-			ManticoreData data = manticores.get(index);
-			if (data == null)
-			{
-				// Manticore not in tracking map
-				return;
-			}
+			// Manticore not in tracking map
+			return;
+		}
 
-			// Only track if we haven't reached 3 orbs yet
-			if (data.orbOrder.size() >= 3)
-			{
-				// Manticore already charged
-				return;
-			}
+		// Only track if we haven't reached 3 orbs yet
+		if (data.orbOrder.size() >= 3)
+		{
+			// Manticore already charged
+			return;
+		}
 
-			OrbType orbType = null;
-			if (graphic == MAGIC_ORB_GRAPHIC_ID)
-			{
-				orbType = OrbType.MAGIC;
-			}
-			else if (graphic == RANGED_ORB_GRAPHIC_ID)
-			{
-				orbType = OrbType.RANGED;
-			}
-			else if (graphic == MELEE_ORB_GRAPHIC_ID)
-			{
-				orbType = OrbType.MELEE;
-			}
+		// Use spot anims exclusively for detection
+		Set<Integer> currentSpotAnims = new HashSet<>();
 
-			if (orbType != null)
+		for (ActorSpotAnim spotAnim : npc.getSpotAnims())
+		{
+			if (spotAnim != null)
 			{
-				// Check if this is a new orb type in the sequence
-				if (data.orbOrder.isEmpty() || data.orbOrder.get(data.orbOrder.size() - 1) != orbType)
+				int spotAnimId = spotAnim.getId();
+				currentSpotAnims.add(spotAnimId);
+
+				// Check if this is a new spot anim (wasn't in the last set)
+				if (!data.lastSpotAnims.contains(spotAnimId))
 				{
-					boolean wasIncomplete = !hasCompletePattern(index);
-					data.orbOrder.add(orbType);
-
-					// Check if pattern just became complete
-					if (wasIncomplete && hasCompletePattern(index))
+					OrbType orbType = getOrbTypeFromSpotAnim(spotAnimId);
+					if (orbType != null)
 					{
-						if (onPatternCompleteCallback != null)
-						{
-							onPatternCompleteCallback.run();
-						}
+						// This is a new orb appearing
+						addOrbToPattern(data, orbType, index);
+						log.debug("Manticore {} detected new spot anim: {} -> {}", index, spotAnimId, orbType);
 					}
 				}
 			}
+		}
 
-			// Store the last checked graphic
-			data.lastCheckedGraphic = graphic;
+		// Update the stored spot anims for next comparison
+		data.lastSpotAnims = currentSpotAnims;
+	}
+
+	private OrbType getOrbTypeFromSpotAnim(int spotAnimId)
+	{
+		if (spotAnimId == MAGIC_ORB_GRAPHIC_ID)
+		{
+			return OrbType.MAGIC;
+		}
+		else if (spotAnimId == RANGED_ORB_GRAPHIC_ID)
+		{
+			return OrbType.RANGED;
+		}
+		else if (spotAnimId == MELEE_ORB_GRAPHIC_ID)
+		{
+			return OrbType.MELEE;
+		}
+		return null;
+	}
+
+	private void addOrbToPattern(ManticoreData data, OrbType orbType, int npcIndex)
+	{
+		// Check if this is a new orb type in the sequence
+		if (data.orbOrder.isEmpty() || data.orbOrder.get(data.orbOrder.size() - 1) != orbType)
+		{
+			boolean wasIncomplete = !hasCompletePattern(npcIndex);
+			data.orbOrder.add(orbType);
+			log.debug("Manticore {} added orb: {} (total: {})", npcIndex, orbType, data.orbOrder.size());
+
+			// Check if pattern just became complete
+			if (wasIncomplete && hasCompletePattern(npcIndex))
+			{
+				log.debug("Manticore {} pattern complete: {}", npcIndex, data.getLosSuffix(isMantimayhem3Active()));
+				if (onPatternCompleteCallback != null)
+				{
+					onPatternCompleteCallback.run();
+				}
+			}
 		}
 	}
 
@@ -303,20 +344,8 @@ public class ManticoreHandler
 				continue;
 			}
 
-			int index = npc.getIndex();
-			ManticoreData data = manticores.get(index);
-
-			if (data != null)
-			{
-				int currentGraphic = npc.getGraphic();
-
-				// Check if the graphic changed from what we last saw
-				if (currentGraphic != data.lastCheckedGraphic)
-				{
-					// Process the new graphic
-					checkNPCGraphics(npc);
-				}
-			}
+			// Simply check the NPC - the method now handles spot anims and graphics internally
+			checkNPCGraphics(npc);
 		}
 	}
 
