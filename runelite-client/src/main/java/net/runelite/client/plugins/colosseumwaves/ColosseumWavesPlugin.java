@@ -460,7 +460,8 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLoSLocation() : null;
-		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
+		// Pass false for isSpawnUrl since this is current LoS, not initial spawn
+		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation, false, false);
 	}
 
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NpcSpawn spawn, boolean isSpawnUrl, boolean isReinforcement)
@@ -489,7 +490,8 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private String buildLoSUrl(List<NpcSpawn> spawns, boolean includePlayer, Point playerLocation, boolean isSpawnUrl, boolean isReinforcement)
 	{
-		StringBuilder urlBuilder = new StringBuilder("https://los.colosim.com/?");
+		String baseUrl = config.useTestLosSite() ? "https://lostest.netlify.app/?" : "https://los.colosim.com/?";
+		StringBuilder urlBuilder = new StringBuilder(baseUrl);
 
 		for (NpcSpawn spawn : spawns)
 		{
@@ -510,6 +512,16 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			int playerEncoded = playerLocation.getX() + (256 * playerLocation.getY());
 			urlBuilder.append("#").append(playerEncoded);
+		}
+
+		// Add suffixes
+		if (isSpawnUrl && !isReinforcement)
+		{
+			urlBuilder.append("_ws");
+		}
+		if (mantimayhem3Active)
+		{
+			urlBuilder.append("_mm3");
 		}
 
 		return urlBuilder.toString();
