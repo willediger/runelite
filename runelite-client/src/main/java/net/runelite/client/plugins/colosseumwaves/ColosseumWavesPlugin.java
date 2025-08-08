@@ -46,8 +46,6 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.GraphicChanged;
-import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.client.config.ConfigManager;
@@ -113,6 +111,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 	// Mantimayhem III tracking
 	private static final int VARBIT_MANTIMAYHEM = 4588; // Varbit for Mantimayhem level
+	private boolean mantimayhem3Active = false;
 
 	@Provides
 	ColosseumWavesConfig provideConfig(ConfigManager configManager)
@@ -137,6 +136,9 @@ public class ColosseumWavesPlugin extends Plugin
 			.build();
 
 		clientToolbar.addNavigation(navButton);
+
+		// Set up callback for when manticore patterns are completed
+		manticoreHandler.setOnPatternCompleteCallback(this::onManticorePatternComplete);
 	}
 
 	@Override
@@ -180,6 +182,18 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 		else if (waveCompleteMatcher.find())
 		{
+			int completedWave = Integer.parseInt(waveCompleteMatcher.group(1));
+			// Extract duration if it's in the message
+			String fullMessage = event.getMessage();
+			if (fullMessage.contains("duration:"))
+			{
+				int startIdx = fullMessage.indexOf("duration:") + 9;
+				int endIdx = fullMessage.indexOf("</col>", startIdx);
+				if (endIdx > startIdx)
+				{
+					String duration = fullMessage.substring(startIdx, endIdx).replace("<col=ff3045>", "").trim();
+				}
+			}
 			clearCurrentWaveState();
 		}
 	}
@@ -223,7 +237,12 @@ public class ColosseumWavesPlugin extends Plugin
 			npcsCaptured = false;
 		}
 
-		// No need to check MM3 on every tick
+		// Check all manticores for graphic changes every tick
+		// This is more reliable than GraphicChanged events which may not fire when NPCs are behind pillars
+		if (inColosseum && currentWave > 0)
+		{
+			manticoreHandler.checkAllManticores();
+		}
 	}
 
 	private Point getPlayerLoSLocation()
@@ -288,8 +307,9 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 		NPC npc = event.getNpc();
 
-		if (isManticore(npc))
+		if (isManticore(npc) && !reinforcementsPhase)
 		{
+			// Only track new manticores during initial spawn, not reinforcements
 			manticoreHandler.onNpcSpawned(npc);
 		}
 
@@ -309,12 +329,19 @@ public class ColosseumWavesPlugin extends Plugin
 					waveSpawns.clear();
 					waveSpawns.addAll(spawns);
 					manticoreHandler.captureSpawnStates(false);
+					// Log initial spawns
+					for (NpcSpawn spawn : spawns)
+					{
+						Point losPos = convertToLoSCoordinates(spawn.getLocation());
+						// NPC spawn logging removed
+					}
 				}
 				else
 				{
 					reinforcementSpawns.clear();
 					reinforcementSpawns.addAll(spawns);
 					manticoreHandler.captureSpawnStates(true);
+					// Reinforcement spawn logging removed
 				}
 
 				npcsCaptured = true;
@@ -322,76 +349,29 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
-	@Subscribe
-	public void onNpcDespawned(NpcDespawned event)
+	// We no longer need the GraphicChanged event handler since we're polling every tick
+	// This approach is more reliable for detecting manticore charges behind pillars
+
+	private void onManticorePatternComplete()
 	{
-		if (!inColosseum)
+		// Update URLs when a manticore pattern becomes complete
+		if (!waveSpawns.isEmpty())
 		{
-			return;
-		}
-
-		NPC npc = event.getNpc();
-		if (isManticore(npc))
-		{
-			manticoreHandler.onNpcDespawned(npc);
-		}
-	}
-
-
-	@Subscribe
-	public void onGraphicChanged(GraphicChanged event)
-	{
-		if (!inColosseum)
-		{
-			return;
-		}
-
-		if (event.getActor() instanceof NPC)
-		{
-			NPC npc = (NPC) event.getActor();
-			if (isManticore(npc))
+			boolean hasManticore = waveSpawns.stream()
+				.anyMatch(s -> s.getNpcId() == NpcID.COLOSSEUM_MANTICORE);
+			if (hasManticore)
 			{
-				boolean hadIncompletePattern = !manticoreHandler.hasCompletePattern(npc.getIndex());
-				manticoreHandler.checkNPCGraphics(npc);
-				boolean hasCompletePatternNow = manticoreHandler.hasCompletePattern(npc.getIndex());
+				updateCurrentWaveUrl(false);
+			}
+		}
 
-				if (hadIncompletePattern && hasCompletePatternNow)
-				{
-					log.debug("Manticore {} pattern complete, updating URLs", npc.getIndex());
-					// Update both spawn and reinforcement URLs if they contain this manticore
-					boolean manticoreInInitialSpawn = false;
-					boolean manticoreInReinforcement = false;
-
-					// Check if this manticore is in initial spawns
-					for (NpcSpawn spawn : waveSpawns)
-					{
-						if (spawn.getNpcId() == NpcID.COLOSSEUM_MANTICORE && spawn.getNpcIndex() == npc.getIndex())
-						{
-							manticoreInInitialSpawn = true;
-							break;
-						}
-					}
-
-					// Check if this manticore is in reinforcements
-					for (NpcSpawn spawn : reinforcementSpawns)
-					{
-						if (spawn.getNpcId() == NpcID.COLOSSEUM_MANTICORE && spawn.getNpcIndex() == npc.getIndex())
-						{
-							manticoreInReinforcement = true;
-							break;
-						}
-					}
-
-					// Update URLs as needed
-					if (manticoreInInitialSpawn)
-					{
-						updateCurrentWaveUrl(false);
-					}
-					if (manticoreInReinforcement)
-					{
-						updateCurrentWaveUrl(true);
-					}
-				}
+		if (!reinforcementSpawns.isEmpty())
+		{
+			boolean hasManticore = reinforcementSpawns.stream()
+				.anyMatch(s -> s.getNpcId() == NpcID.COLOSSEUM_MANTICORE);
+			if (hasManticore)
+			{
+				updateCurrentWaveUrl(true);
 			}
 		}
 	}
@@ -404,13 +384,14 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 			{
+				Point currentPos = getNPCSceneLocation(npc);
+
 				// Ensure manticores are tracked in the handler
 				if (isManticore(npc))
 				{
 					manticoreHandler.ensureManticoreTracked(npc);
 				}
-				
-				Point currentPos = getNPCSceneLocation(npc);
+
 				activeNPCs.add(new NpcSpawn(npc.getId(), currentPos, npc.getIndex()));
 			}
 		}
@@ -479,7 +460,8 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLoSLocation() : null;
-		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation);
+		// Pass false for isSpawnUrl since this is current LoS, not initial spawn
+		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation, false, false);
 	}
 
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NpcSpawn spawn, boolean isSpawnUrl, boolean isReinforcement)
@@ -508,7 +490,8 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private String buildLoSUrl(List<NpcSpawn> spawns, boolean includePlayer, Point playerLocation, boolean isSpawnUrl, boolean isReinforcement)
 	{
-		StringBuilder urlBuilder = new StringBuilder("https://los.colosim.com/?");
+		String baseUrl = config.useTestLosSite() ? "https://lostest.netlify.app/?" : "https://los.colosim.com/?";
+		StringBuilder urlBuilder = new StringBuilder(baseUrl);
 
 		for (NpcSpawn spawn : spawns)
 		{
@@ -529,6 +512,16 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			int playerEncoded = playerLocation.getX() + (256 * playerLocation.getY());
 			urlBuilder.append("#").append(playerEncoded);
+		}
+
+		// Add suffixes
+		if (isSpawnUrl && !isReinforcement)
+		{
+			urlBuilder.append("_ws");
+		}
+		if (mantimayhem3Active)
+		{
+			urlBuilder.append("_mm3");
 		}
 
 		return urlBuilder.toString();
@@ -576,8 +569,8 @@ public class ColosseumWavesPlugin extends Plugin
 	private void resetState()
 	{
 		inColosseum = false;
+		mantimayhem3Active = false;
 		clearCurrentWaveState();
-		manticoreHandler.setMantimayhem3Active(false);
 	}
 
 	private void clearCurrentWaveState()
@@ -592,20 +585,20 @@ public class ColosseumWavesPlugin extends Plugin
 		playerLocationAtWaveSpawn = null;
 		playerLocationAtReinforcements = null;
 
-		// Clear manticore spawn states for the next wave
 		manticoreHandler.clear();
 	}
 
 	private void checkMantimayhem3Status()
 	{
 		// Simply check if Mantimayhem is level 3 or higher
-		boolean mm3Active = client.getVarbitValue(VARBIT_MANTIMAYHEM) >= 3;
+		int mantimayhemlevel = client.getVarbitValue(VARBIT_MANTIMAYHEM);
+		boolean mm3Active = mantimayhemlevel >= 3;
 
 		// Only log when status changes
-		boolean currentStatus = manticoreHandler.isMantimayhem3Active();
-		if (currentStatus != mm3Active)
+		if (mantimayhem3Active != mm3Active)
 		{
-			log.debug("Mantimayhem III status changed: {}", mm3Active);
+			mantimayhem3Active = mm3Active;
+			// Also update the handler so it knows the current MM3 status
 			manticoreHandler.setMantimayhem3Active(mm3Active);
 		}
 	}

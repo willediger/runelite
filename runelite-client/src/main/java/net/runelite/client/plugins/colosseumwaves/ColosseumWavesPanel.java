@@ -164,14 +164,18 @@ public class ColosseumWavesPanel extends PluginPanel
 		return label;
 	}
 
-	private static class WavePanel extends JPanel
+	private class WavePanel extends JPanel
 	{
+		private final int waveNumber;
 		private final JLabel numberLabel;
 		private final JButton spawnButton;
 		private final JButton reinfButton;
+		private String spawnUrl;
+		private String reinfUrl;
 
 		WavePanel(int wave)
 		{
+			this.waveNumber = wave;
 			setOpaque(false);
 			setLayout(new BorderLayout());
 			setBorder(new EmptyBorder(0, GAP, 0, GAP));
@@ -203,23 +207,31 @@ public class ColosseumWavesPanel extends PluginPanel
 
 		void setSpawnUrl(String url)
 		{
-			enableButton(spawnButton, url);
+			this.spawnUrl = url;
+			enableButton(spawnButton, () ->
+			{
+				LinkBrowser.browse(url);
+			});
 		}
 
 		void setReinforcementUrl(String url)
 		{
+			this.reinfUrl = url;
 			reinfButton.setVisible(true);
-			enableButton(reinfButton, url);
+			enableButton(reinfButton, () ->
+			{
+				LinkBrowser.browse(url);
+			});
 		}
 
 
-		private static void enableButton(JButton b, String url)
+		private void enableButton(JButton b, Runnable action)
 		{
 			for (var l : b.getActionListeners())
 			{
 				b.removeActionListener(l);
 			}
-			b.addActionListener(e -> LinkBrowser.browse(url));
+			b.addActionListener(e -> action.run());
 			b.setEnabled(true);
 		}
 	}
