@@ -74,15 +74,4 @@ public interface ColosseumWavesConfig extends Config
 	{
 		return true;
 	}
-
-	@ConfigItem(
-		keyName = "useTestLosSite",
-		name = "Use Test LoS Site",
-		description = "Use lostest.netlify.app instead of los.colosim.com (temporary for testing)",
-		position = 4
-	)
-	default boolean useTestLosSite()
-	{
-		return false;
-	}
 }

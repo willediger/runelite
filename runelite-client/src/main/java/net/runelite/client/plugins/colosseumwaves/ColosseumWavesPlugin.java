@@ -483,7 +483,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 	private String buildLoSUrl(List<NpcSpawn> spawns, boolean includePlayer, Point playerLocation, boolean isSpawnUrl, boolean isReinforcement)
 	{
-		String baseUrl = config.useTestLosSite() ? "https://lostest.netlify.app/?" : "https://los.colosim.com/?";
+		String baseUrl = "https://los.colosim.com/?";
 		StringBuilder urlBuilder = new StringBuilder(baseUrl);
 
 		for (NpcSpawn spawn : spawns)
