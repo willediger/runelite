@@ -261,23 +261,8 @@ public class ColosseumWavesPlugin extends Plugin
 			return null;
 		}
 
-		Scene scene = client.getScene();
-		Tile[][][] tiles = scene.getTiles();
-
-		int sceneX = localPoint.getSceneX();
-		int sceneY = localPoint.getSceneY();
-		int plane = client.getPlane();
-
-		if (sceneX >= 0 && sceneX < 104 && sceneY >= 0 && sceneY < 104 && plane >= 0 && plane < 4)
-		{
-			Tile playerTile = tiles[plane][sceneX][sceneY];
-			if (playerTile != null)
-			{
-				Point sceneLocation = playerTile.getSceneLocation();
-				return convertToLoSCoordinates(sceneLocation);
-			}
-		}
-		return null;
+		Point sceneLocation = new Point(localPoint.getSceneX(), localPoint.getSceneY());
+		return convertToLoSCoordinates(sceneLocation);
 	}
 
 	private boolean isInColosseum()
