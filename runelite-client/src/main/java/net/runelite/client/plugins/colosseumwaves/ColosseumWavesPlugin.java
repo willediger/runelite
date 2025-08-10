@@ -437,7 +437,7 @@ public class ColosseumWavesPlugin extends Plugin
 
 		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLocation() : null;
 		// Pass false for isSpawnUrl since this is current LoS, not initial spawn
-		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation, false, false);
+		return buildLoSUrl(currentSpawns, currentPlayerLocation, false, false);
 	}
 
 	private void appendManticoreSuffixIfNeeded(StringBuilder urlBuilder, NpcSpawn spawn, boolean isSpawnUrl, boolean isReinforcement)
@@ -459,12 +459,12 @@ public class ColosseumWavesPlugin extends Plugin
 		urlBuilder.append(suffix);
 	}
 
-	private String buildLoSUrl(List<NpcSpawn> spawns, boolean includePlayer, Point playerLocation)
+	private String buildLoSUrl(List<NpcSpawn> spawns, Point playerLocation)
 	{
-		return buildLoSUrl(spawns, includePlayer, playerLocation, false, false);
+		return buildLoSUrl(spawns, playerLocation, false, false);
 	}
 
-	private String buildLoSUrl(List<NpcSpawn> spawns, boolean includePlayer, Point playerLocation, boolean isSpawnUrl, boolean isReinforcement)
+	private String buildLoSUrl(List<NpcSpawn> spawns, Point playerLocation, boolean isSpawnUrl, boolean isReinforcement)
 	{
 		String baseUrl = "https://los.colosim.com/?";
 		StringBuilder urlBuilder = new StringBuilder(baseUrl);
@@ -484,7 +484,7 @@ public class ColosseumWavesPlugin extends Plugin
 			}
 		}
 
-		if (includePlayer && playerLocation != null)
+		if (playerLocation != null)
 		{
 			int playerEncoded = playerLocation.getX() + (256 * playerLocation.getY());
 			urlBuilder.append("#").append(playerEncoded);
@@ -511,7 +511,6 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 
 		List<NpcSpawn> spawns;
-		boolean includePlayer;
 		Point playerLocation;
 
 		if (!isReinforcements)
@@ -521,10 +520,9 @@ public class ColosseumWavesPlugin extends Plugin
 			{
 				return;
 			}
-			includePlayer = config.includePlayerLocationSpawns();
-			playerLocation = playerLocationAtWaveSpawn;
+			playerLocation = config.includePlayerLocationSpawns() ? playerLocationAtWaveSpawn : null;
 
-			String url = buildLoSUrl(spawns, includePlayer, playerLocation, true, false);
+			String url = buildLoSUrl(spawns, playerLocation, true, false);
 			panel.setWaveSpawnUrl(currentWave, url);
 		}
 		else
@@ -534,10 +532,9 @@ public class ColosseumWavesPlugin extends Plugin
 			{
 				return;
 			}
-			includePlayer = config.includePlayerLocationReinforcements();
-			playerLocation = playerLocationAtReinforcements;
+			playerLocation = config.includePlayerLocationReinforcements() ? playerLocationAtReinforcements : null;
 
-			String url = buildLoSUrl(spawns, includePlayer, playerLocation, true, true);
+			String url = buildLoSUrl(spawns, playerLocation, true, true);
 			panel.setWaveReinforcementUrl(currentWave, url);
 		}
 	}
