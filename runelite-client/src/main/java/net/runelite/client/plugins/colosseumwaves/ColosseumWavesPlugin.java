@@ -39,8 +39,6 @@ import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
-import net.runelite.api.Scene;
-import net.runelite.api.Tile;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
@@ -245,7 +243,7 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
-	private Point getPlayerLoSLocation()
+	private Point getPlayerLocation()
 	{
 		Player localPlayer = client.getLocalPlayer();
 		if (localPlayer == null)
@@ -404,7 +402,7 @@ public class ColosseumWavesPlugin extends Plugin
 			{
 				if (config.includePlayerLocationSpawns())
 				{
-					playerLocationAtWaveSpawn = getPlayerLoSLocation();
+					playerLocationAtWaveSpawn = getPlayerLocation();
 				}
 				panel.addWave(currentWave);
 				updateCurrentWaveUrl(false);
@@ -416,7 +414,7 @@ public class ColosseumWavesPlugin extends Plugin
 			{
 				if (config.includePlayerLocationReinforcements())
 				{
-					playerLocationAtReinforcements = getPlayerLoSLocation();
+					playerLocationAtReinforcements = getPlayerLocation();
 				}
 				updateCurrentWaveUrl(true);
 			}
@@ -437,7 +435,7 @@ public class ColosseumWavesPlugin extends Plugin
 			return null;
 		}
 
-		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLoSLocation() : null;
+		Point currentPlayerLocation = config.includePlayerLocationCurrent() ? getPlayerLocation() : null;
 		// Pass false for isSpawnUrl since this is current LoS, not initial spawn
 		return buildLoSUrl(currentSpawns, config.includePlayerLocationCurrent(), currentPlayerLocation, false, false);
 	}
