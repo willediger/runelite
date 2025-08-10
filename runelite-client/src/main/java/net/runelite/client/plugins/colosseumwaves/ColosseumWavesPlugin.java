@@ -329,19 +329,12 @@ public class ColosseumWavesPlugin extends Plugin
 					waveSpawns.clear();
 					waveSpawns.addAll(spawns);
 					manticoreHandler.captureSpawnStates(false);
-					// Log initial spawns
-					for (NpcSpawn spawn : spawns)
-					{
-						Point losPos = convertToLoSCoordinates(spawn.getLocation());
-						// NPC spawn logging removed
-					}
 				}
 				else
 				{
 					reinforcementSpawns.clear();
 					reinforcementSpawns.addAll(spawns);
 					manticoreHandler.captureSpawnStates(true);
-					// Reinforcement spawn logging removed
 				}
 
 				npcsCaptured = true;

@@ -113,11 +113,9 @@ public class ManticoreHandler
 		ManticoreData data = manticores.get(npcIndex);
 		if (data == null)
 		{
-			log.debug("Manticore {} not found in tracking map", npcIndex);
 			return "u";
 		}
-		String suffix = data.getLosSuffix(isMantimayhem3Active());
-		return suffix;
+		return data.getLosSuffix(isMantimayhem3Active());
 	}
 
 	public String getManticoreSpawnLosSuffix(int npcIndex, boolean isReinforcement)
@@ -125,7 +123,6 @@ public class ManticoreHandler
 		ManticoreData data = manticores.get(npcIndex);
 		if (data == null)
 		{
-			log.debug("Manticore {} not found for {} URL", npcIndex, isReinforcement ? "reinforcement" : "spawn");
 			return "u";
 		}
 
@@ -287,7 +284,6 @@ public class ManticoreHandler
 					{
 						// This is a new orb appearing
 						addOrbToPattern(data, orbType, index);
-						log.debug("Manticore {} detected new spot anim: {} -> {}", index, spotAnimId, orbType);
 					}
 				}
 			}
@@ -321,12 +317,10 @@ public class ManticoreHandler
 		{
 			boolean wasIncomplete = !hasCompletePattern(npcIndex);
 			data.orbOrder.add(orbType);
-			log.debug("Manticore {} added orb: {} (total: {})", npcIndex, orbType, data.orbOrder.size());
 
 			// Check if pattern just became complete
 			if (wasIncomplete && hasCompletePattern(npcIndex))
 			{
-				log.debug("Manticore {} pattern complete: {}", npcIndex, data.getLosSuffix(isMantimayhem3Active()));
 				if (onPatternCompleteCallback != null)
 				{
 					onPatternCompleteCallback.run();
