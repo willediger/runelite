@@ -48,7 +48,7 @@ public interface ColosseumWavesConfig extends Config
 	)
 	default boolean includePlayerLocationSpawns()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(
@@ -60,7 +60,7 @@ public interface ColosseumWavesConfig extends Config
 	)
 	default boolean includePlayerLocationReinforcements()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(
