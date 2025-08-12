@@ -47,6 +47,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.gameval.NpcID;
+import static net.runelite.api.gameval.VarbitID.COLOSSEUM_MODIFIER_MANTIMAYHEM_STACKS_CLIENT;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -55,6 +56,7 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
 import lombok.extern.slf4j.Slf4j;
+
 
 @Slf4j
 @PluginDescriptor(
@@ -109,7 +111,6 @@ public class ColosseumWavesPlugin extends Plugin
 	private Point playerLocationAtReinforcements;
 
 	// Mantimayhem III tracking
-	private static final int VARBIT_MANTIMAYHEM = 4588;
 	private boolean mantimayhem3Active = false;
 
 	@Provides
@@ -566,7 +567,7 @@ public class ColosseumWavesPlugin extends Plugin
 	private void checkMantimayhem3Status()
 	{
 		// Simply check if Mantimayhem is level 3 or higher
-		int mantimayhemlevel = client.getVarbitValue(VARBIT_MANTIMAYHEM);
+		int mantimayhemlevel = client.getVarbitValue(COLOSSEUM_MODIFIER_MANTIMAYHEM_STACKS_CLIENT);
 		boolean mm3Active = mantimayhemlevel >= 3;
 
 		// Only log when status changes
