@@ -32,6 +32,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.annotation.Nullable;
+import javax.inject.Provider;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Provides;
 import net.runelite.api.ChatMessageType;
@@ -55,10 +56,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
-import lombok.extern.slf4j.Slf4j;
 
-
-@Slf4j
 @PluginDescriptor(
 	name = "Colosseum Waves",
 	description = "Capture Fortis Colosseum wave spawns and pillar stacks and generate shareable links to colosim.com's line of sight tool for analysis",
@@ -96,6 +94,9 @@ public class ColosseumWavesPlugin extends Plugin
 	@Inject
 	private ManticoreHandler manticoreHandler;
 
+	@Inject
+	private Provider<ColosseumWavesPanel> panelProvider;
+
 	private ColosseumWavesPanel panel;
 	private NavigationButton navButton;
 
@@ -124,7 +125,7 @@ public class ColosseumWavesPlugin extends Plugin
 	{
 		resetState();
 
-		panel = injector.getInstance(ColosseumWavesPanel.class);
+		panel = panelProvider.get();
 
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "colosseum_icon.png");
 
@@ -233,6 +234,7 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
+	@Nullable
 	private Point getPlayerLocation()
 	{
 		Player localPlayer = client.getLocalPlayer();
@@ -363,7 +365,7 @@ public class ColosseumWavesPlugin extends Plugin
 		{
 			if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 			{
-				@Nullable Point currentPos = getNPCSceneLocation(npc);
+				Point currentPos = getNPCSceneLocation(npc);
 				if (currentPos == null)
 				{
 					continue;
@@ -429,6 +431,7 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 	}
 
+	@Nullable
 	public String generateCurrentLoSLink()
 	{
 		if (!inColosseum)
@@ -467,7 +470,7 @@ public class ColosseumWavesPlugin extends Plugin
 		urlBuilder.append(suffix);
 	}
 
-	private String buildLoSUrl(List<NpcSpawn> spawns, Point playerLocation, boolean isSpawnUrl, boolean isReinforcement)
+	private String buildLoSUrl(List<NpcSpawn> spawns, @Nullable Point playerLocation, boolean isSpawnUrl, boolean isReinforcement)
 	{
 		String baseUrl = "https://los.colosim.com/?";
 		StringBuilder urlBuilder = new StringBuilder(baseUrl);
@@ -567,8 +570,8 @@ public class ColosseumWavesPlugin extends Plugin
 	private void checkMantimayhem3Status()
 	{
 		// Simply check if Mantimayhem is level 3 or higher
-		int mantimayhemlevel = client.getVarbitValue(COLOSSEUM_MODIFIER_MANTIMAYHEM_STACKS_CLIENT);
-		boolean mm3Active = mantimayhemlevel >= 3;
+		int mantimayhemLevel = client.getVarbitValue(COLOSSEUM_MODIFIER_MANTIMAYHEM_STACKS_CLIENT);
+		boolean mm3Active = mantimayhemLevel >= 3;
 
 		// Only log when status changes
 		if (mantimayhem3Active != mm3Active)

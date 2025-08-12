@@ -34,14 +34,12 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ActorSpotAnim;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.gameval.SpotanimID;
 import net.runelite.api.WorldView;
 
-@Slf4j
 @Singleton
 public class ManticoreHandler
 {
