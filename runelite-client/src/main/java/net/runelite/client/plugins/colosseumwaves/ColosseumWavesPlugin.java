@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
+import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Provides;
 import net.runelite.api.ChatMessageType;
@@ -39,8 +40,8 @@ import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
-import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -108,7 +109,7 @@ public class ColosseumWavesPlugin extends Plugin
 	private Point playerLocationAtReinforcements;
 
 	// Mantimayhem III tracking
-	private static final int VARBIT_MANTIMAYHEM = 4588; // Varbit for Mantimayhem level
+	private static final int VARBIT_MANTIMAYHEM = 4588;
 	private boolean mantimayhem3Active = false;
 
 	@Provides
@@ -180,18 +181,6 @@ public class ColosseumWavesPlugin extends Plugin
 		}
 		else if (waveCompleteMatcher.find())
 		{
-			int completedWave = Integer.parseInt(waveCompleteMatcher.group(1));
-			// Extract duration if it's in the message
-			String fullMessage = event.getMessage();
-			if (fullMessage.contains("duration:"))
-			{
-				int startIdx = fullMessage.indexOf("duration:") + 9;
-				int endIdx = fullMessage.indexOf("</col>", startIdx);
-				if (endIdx > startIdx)
-				{
-					String duration = fullMessage.substring(startIdx, endIdx).replace("<col=ff3045>", "").trim();
-				}
-			}
 			clearCurrentWaveState();
 		}
 	}
@@ -251,22 +240,29 @@ public class ColosseumWavesPlugin extends Plugin
 			return null;
 		}
 
-		WorldPoint worldLocation = localPlayer.getWorldLocation();
-		LocalPoint localPoint = LocalPoint.fromWorld(client, worldLocation);
-
-		if (localPoint == null)
+		WorldView wv = client.getTopLevelWorldView();
+		if (wv == null)
 		{
 			return null;
 		}
 
-		Point sceneLocation = new Point(localPoint.getSceneX(), localPoint.getSceneY());
-		return convertToLoSCoordinates(sceneLocation);
+		LocalPoint lp = LocalPoint.fromWorld(wv, localPlayer.getWorldLocation());
+		if (lp == null)
+		{
+			return null;
+		}
+
+		return convertToLoSCoordinates(new Point(lp.getSceneX(), lp.getSceneY()));
 	}
 
 	private boolean isInColosseum()
 	{
-		int[] mapRegions = client.getMapRegions();
-		for (int region : mapRegions)
+		WorldView wv = client.getTopLevelWorldView();
+		if (wv == null)
+		{
+			return false;
+		}
+		for (int region : wv.getMapRegions())
 		{
 			if (region == COLOSSEUM_REGION_ID)
 			{
@@ -356,34 +352,45 @@ public class ColosseumWavesPlugin extends Plugin
 	{
 		List<NpcSpawn> activeNPCs = new ArrayList<>();
 
-		for (NPC npc : client.getNpcs())
+		WorldView wv = client.getTopLevelWorldView();
+		if (wv == null)
+		{
+			return activeNPCs;
+		}
+
+		for (NPC npc : wv.npcs())
 		{
 			if (COLOSSEUM_WAVE_NPCS.containsKey(npc.getId()))
 			{
-				Point currentPos = getNPCSceneLocation(npc);
-
-				// Ensure manticores are tracked in the handler
+				@Nullable Point currentPos = getNPCSceneLocation(npc);
+				if (currentPos == null)
+				{
+					continue;
+				}
 				if (isManticore(npc))
 				{
 					manticoreHandler.ensureManticoreTracked(npc);
 				}
-
 				activeNPCs.add(new NpcSpawn(npc.getId(), currentPos, npc.getIndex()));
 			}
 		}
-
 		return activeNPCs;
 	}
 
+	@Nullable
 	private Point getNPCSceneLocation(NPC npc)
 	{
-		WorldPoint worldPoint = npc.getWorldLocation();
-		LocalPoint worldLocalPoint = LocalPoint.fromWorld(client, worldPoint);
-
-		int sceneX = worldLocalPoint.getSceneX();
-		int sceneY = worldLocalPoint.getSceneY();
-
-		return new Point(sceneX, sceneY);
+		WorldView wv = client.getTopLevelWorldView();
+		if (wv == null)
+		{
+			return null;
+		}
+		LocalPoint lp = LocalPoint.fromWorld(wv, npc.getWorldLocation());
+		if (lp == null)
+		{
+			return null;
+		}
+		return new Point(lp.getSceneX(), lp.getSceneY());
 	}
 
 	private Point convertToLoSCoordinates(Point sceneLocation)
@@ -457,11 +464,6 @@ public class ColosseumWavesPlugin extends Plugin
 			suffix = manticoreHandler.getManticoreLosSuffix(spawn.getNpcIndex());
 		}
 		urlBuilder.append(suffix);
-	}
-
-	private String buildLoSUrl(List<NpcSpawn> spawns, Point playerLocation)
-	{
-		return buildLoSUrl(spawns, playerLocation, false, false);
 	}
 
 	private String buildLoSUrl(List<NpcSpawn> spawns, Point playerLocation, boolean isSpawnUrl, boolean isReinforcement)

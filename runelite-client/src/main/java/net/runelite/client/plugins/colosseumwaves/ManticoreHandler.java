@@ -32,11 +32,14 @@ import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ActorSpotAnim;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.gameval.SpotanimID;
+import net.runelite.api.WorldView;
 
 @Slf4j
 @Singleton
@@ -47,8 +50,11 @@ public class ManticoreHandler
 
 
 	// Callback for when a manticore pattern is completed
+	@Setter
 	private Runnable onPatternCompleteCallback;
 
+	@Getter
+	@Setter
 	private boolean mantimayhem3Active = false;
 
 	private static final int MAGIC_ORB_GRAPHIC_ID = SpotanimID.VFX_MANTICORE_01_PROJECTILE_MAGIC_01;
@@ -157,17 +163,6 @@ public class ManticoreHandler
 		}
 	}
 
-	public boolean isManticoreUncharged(NPC npc)
-	{
-		return isManticoreUncharged(npc.getIndex());
-	}
-
-	public boolean isManticoreUncharged(int npcIndex)
-	{
-		ManticoreData data = manticores.get(npcIndex);
-		return data == null || !data.isCharged();
-	}
-
 	public boolean hasCompletePattern(int npcIndex)
 	{
 		ManticoreData data = manticores.get(npcIndex);
@@ -178,22 +173,6 @@ public class ManticoreHandler
 		// Without MM3, having first orb is enough
 		// With MM3, need full sequence (3 orbs)
 		return !isMantimayhem3Active() ? !data.orbOrder.isEmpty() : data.isCharged();
-	}
-
-	public int getOrbCount(int npcIndex)
-	{
-		ManticoreData data = manticores.get(npcIndex);
-		return data == null ? 0 : data.orbOrder.size();
-	}
-
-	public void setMantimayhem3Active(boolean active)
-	{
-		this.mantimayhem3Active = active;
-	}
-
-	public boolean isMantimayhem3Active()
-	{
-		return mantimayhem3Active;
 	}
 
 	public void clear()
@@ -331,20 +310,18 @@ public class ManticoreHandler
 
 	public void checkAllManticores()
 	{
-		for (NPC npc : client.getNpcs())
+		WorldView wv = client.getTopLevelWorldView();
+		if (wv == null)
+		{
+			return;
+		}
+		for (NPC npc : wv.npcs())
 		{
 			if (npc.getId() != net.runelite.api.gameval.NpcID.COLOSSEUM_MANTICORE)
 			{
 				continue;
 			}
-
-			// Simply check the NPC - the method now handles spot anims and graphics internally
 			checkNPCGraphics(npc);
 		}
-	}
-
-	public void setOnPatternCompleteCallback(Runnable callback)
-	{
-		this.onPatternCompleteCallback = callback;
 	}
 }

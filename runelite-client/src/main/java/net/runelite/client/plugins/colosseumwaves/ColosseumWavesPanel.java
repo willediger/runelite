@@ -54,9 +54,9 @@ public class ColosseumWavesPanel extends PluginPanel
 {
 	private static final int COMPONENT_HEIGHT = 30;
 	private static final int GAP = 5;
-	private static final int waveNumberWidth = 42;
-	private static final int spawnButtonWidth = 62;
-	private static final int reinforcementsButtonWidth = 118;
+	private static final int WAVE_NUMBER_WIDTH = 42;
+	private static final int SPAWN_BUTTON_WIDTH = 62;
+	private static final int REINFORCEMENTS_BUTTON_WIDTH = 118;
 	private static final Dimension FULL_WIDTH = new Dimension(Integer.MAX_VALUE, COMPONENT_HEIGHT);
 	private static final Color BG_COLOR = ColorScheme.DARK_GRAY_COLOR;
 	private static final Color BTN_COLOR = ColorScheme.DARKER_GRAY_COLOR;
@@ -164,14 +164,12 @@ public class ColosseumWavesPanel extends PluginPanel
 		return label;
 	}
 
-	private class WavePanel extends JPanel
+	private static class WavePanel extends JPanel
 	{
 		private final int waveNumber;
 		private final JLabel numberLabel;
 		private final JButton spawnButton;
 		private final JButton reinfButton;
-		private String spawnUrl;
-		private String reinfUrl;
 
 		WavePanel(int wave)
 		{
@@ -186,12 +184,12 @@ public class ColosseumWavesPanel extends PluginPanel
 			setFixedSize(row, FULL_WIDTH);
 
 			numberLabel = createLabel(String.valueOf(wave));
-			setFixedSize(numberLabel, waveNumberWidth, COMPONENT_HEIGHT);
+			setFixedSize(numberLabel, WAVE_NUMBER_WIDTH, COMPONENT_HEIGHT);
 
-			spawnButton = createButton("Spawn", new Dimension(spawnButtonWidth, COMPONENT_HEIGHT));
+			spawnButton = createButton("Spawn", new Dimension(SPAWN_BUTTON_WIDTH, COMPONENT_HEIGHT));
 			spawnButton.setEnabled(false);
 
-			reinfButton = createButton("Reinforcements", new Dimension(reinforcementsButtonWidth, COMPONENT_HEIGHT));
+			reinfButton = createButton("Reinforcements", new Dimension(REINFORCEMENTS_BUTTON_WIDTH, COMPONENT_HEIGHT));
 			reinfButton.setEnabled(false);
 			reinfButton.setVisible(false);
 
@@ -207,23 +205,14 @@ public class ColosseumWavesPanel extends PluginPanel
 
 		void setSpawnUrl(String url)
 		{
-			this.spawnUrl = url;
-			enableButton(spawnButton, () ->
-			{
-				LinkBrowser.browse(url);
-			});
+			enableButton(spawnButton, () -> LinkBrowser.browse(url));
 		}
 
 		void setReinforcementUrl(String url)
 		{
-			this.reinfUrl = url;
 			reinfButton.setVisible(true);
-			enableButton(reinfButton, () ->
-			{
-				LinkBrowser.browse(url);
-			});
+			enableButton(reinfButton, () -> LinkBrowser.browse(url));
 		}
-
 
 		private void enableButton(JButton b, Runnable action)
 		{
