@@ -30,6 +30,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
@@ -62,9 +63,6 @@ public class ColosseumWavesPanel extends PluginPanel
 	private static final Color BTN_COLOR = ColorScheme.DARKER_GRAY_COLOR;
 	private static final Color HOVER_COLOR = new Color(52, 52, 52);
 
-	private final ColosseumWavesPlugin plugin;
-	private final ClientThread clientThread;
-
 	private final JPanel wavesContainer;
 	private final List<WavePanel> wavePanels = new ArrayList<>();
 
@@ -72,8 +70,6 @@ public class ColosseumWavesPanel extends PluginPanel
 	public ColosseumWavesPanel(final ColosseumWavesPlugin plugin, final ClientThread clientThread)
 	{
 		super(false);
-		this.plugin = plugin;
-		this.clientThread = clientThread;
 
 		setBackground(BG_COLOR);
 		setLayout(new BorderLayout());
@@ -164,16 +160,14 @@ public class ColosseumWavesPanel extends PluginPanel
 		return label;
 	}
 
-	private static class WavePanel extends JPanel
+	private static final class WavePanel extends JPanel
 	{
-		private final int waveNumber;
 		private final JLabel numberLabel;
 		private final JButton spawnButton;
 		private final JButton reinfButton;
 
 		WavePanel(int wave)
 		{
-			this.waveNumber = wave;
 			setOpaque(false);
 			setLayout(new BorderLayout());
 			setBorder(new EmptyBorder(0, GAP, 0, GAP));
@@ -216,7 +210,7 @@ public class ColosseumWavesPanel extends PluginPanel
 
 		private void enableButton(JButton b, Runnable action)
 		{
-			for (var l : b.getActionListeners())
+			for (ActionListener l : b.getActionListeners())
 			{
 				b.removeActionListener(l);
 			}
