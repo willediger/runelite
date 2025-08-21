@@ -335,20 +335,69 @@ public class LayoutManager
 		{
 			ItemComposition def = client.getItemDefinition(item);
 
-			int bankCount = bank.count(item);
-			int qty = bankCount > 0 ? bankCount : potionStorage.count(item);
+			// Check if this is a placeholder and if so, get the real item for potion storage check
+			boolean isPlaceholder = def.getPlaceholderTemplateId() >= 0 && def.getPlaceholderId() >= 0;
+			int realItemId = isPlaceholder ? def.getPlaceholderId() : item;
+			
+			// If this is a placeholder, the bank count should be 0 (it's not a real item)
+			// Otherwise get the actual count from the bank
+			int bankCount = isPlaceholder ? 0 : bank.count(item);
+			
+			// Check what dose variant potion storage would withdraw
+			int potionStorageWithdrawItemId = potionStorage.getWithdrawDoseItemId(realItemId);
+			
+			// Determine how to handle potion storage:
+			// 1. If bank has items (not just placeholder), only add potion storage if doses match
+			// 2. If only placeholder exists, show potion storage dose variant
+			int potionStoreCount = 0;
+			int displayItemId = item;
+			ItemComposition displayDef = def;
+			
+			if (bankCount > 0)
+			{
+				// Bank has actual items
+				// Only add potion storage count if the dose variants match
+				if (potionStorageWithdrawItemId == item)
+				{
+					potionStoreCount = potionStorage.countMatchingDose(realItemId);
+				}
+				displayItemId = item;
+				displayDef = def;
+			}
+			else if (isPlaceholder && potionStorageWithdrawItemId > 0)
+			{
+				// Only placeholder in bank, switch to potion storage dose variant
+				displayItemId = potionStorageWithdrawItemId;
+				displayDef = client.getItemDefinition(potionStorageWithdrawItemId);
+				potionStoreCount = potionStorage.count(potionStorageWithdrawItemId);
+			}
+			else
+			{
+				// No items in bank and not a placeholder, or no potion storage match
+				// Check if this item itself is in potion storage
+				potionStoreCount = potionStorage.countMatchingDose(realItemId);
+				if (potionStoreCount > 0 && potionStorageWithdrawItemId > 0)
+				{
+					displayItemId = potionStorageWithdrawItemId;
+					displayDef = client.getItemDefinition(potionStorageWithdrawItemId);
+					potionStoreCount = potionStorage.count(potionStorageWithdrawItemId);
+				}
+			}
+			
+			// Calculate total quantity
+			int qty = bankCount + potionStoreCount;
 
 			boolean isPotStorage = bankCount <= 0 && qty > 0;
 
-			c.setItemId(item);
+			c.setItemId(displayItemId);
 			c.setItemQuantity(qty);
 			c.setItemQuantityMode(ItemQuantityMode.STACKABLE);
 
-			c.setName("<col=ff9040>" + def.getName() + "</col>");
+			c.setName("<col=ff9040>" + displayDef.getName() + "</col>");
 			c.clearActions();
 
-			// Jagex Placeholder
-			if (def.getPlaceholderTemplateId() >= 0 && def.getPlaceholderId() >= 0)
+			// Jagex Placeholder - but only if there are no items in potion storage
+			if (isPlaceholder && potionStoreCount == 0)
 			{
 				c.setItemQuantity(qty);
 				c.setOpacity(120);
@@ -419,7 +468,7 @@ public class LayoutManager
 					c.setAction(opIdx++, "Withdraw-All");
 				}
 				c.setAction(opIdx++, "Withdraw-All-but-1");
-				if (!isPotStorage && client.getVarbitValue(VarbitID.BANK_BANKOPS_TOGGLE_ON) == 1 && def.getIntValue(ParamID.BANK_AUTOCHARGE) != -1)
+				if (!isPotStorage && client.getVarbitValue(VarbitID.BANK_BANKOPS_TOGGLE_ON) == 1 && displayDef.getIntValue(ParamID.BANK_AUTOCHARGE) != -1)
 				{
 					c.setAction(opIdx++, "Configure-Charges");
 				}

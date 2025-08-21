@@ -232,6 +232,78 @@ class PotionStorage
 		return 0;
 	}
 
+	int countMatchingDose(int itemId)
+	{
+		if (itemId == ItemID.VIAL_EMPTY)
+		{
+			return getVialsInPotionStorage();
+		}
+
+		if (potions == null)
+		{
+			return 0;
+		}
+
+		// Check each potion to see if any dose variant matches
+		for (Potion potion : potions)
+		{
+			if (potion == null)
+			{
+				continue;
+			}
+
+			var potionEnum = potion.potionEnum;
+			// Check all dose variants (1-4)
+			for (int dose = 1; dose <= 4; dose++)
+			{
+				int potionItemId = potionEnum.getIntValue(dose);
+				if (potionItemId == itemId)
+				{
+					// Found a match - calculate how many of this specific dose variant we have
+					// If we have 40 doses total and this item is dose(4), we have 10
+					// If we have 40 doses total and this item is dose(2), we have 20
+					return potion.doses / dose;
+				}
+			}
+		}
+		return 0;
+	}
+
+	int getWithdrawDoseItemId(int itemId)
+	{
+		if (itemId == ItemID.VIAL_EMPTY)
+		{
+			return ItemID.VIAL_EMPTY;
+		}
+
+		if (potions == null)
+		{
+			return -1;
+		}
+
+		// Check each potion to see if any dose variant matches
+		for (Potion potion : potions)
+		{
+			if (potion == null)
+			{
+				continue;
+			}
+
+			var potionEnum = potion.potionEnum;
+			// Check all dose variants (1-4)
+			for (int dose = 1; dose <= 4; dose++)
+			{
+				int potionItemId = potionEnum.getIntValue(dose);
+				if (potionItemId == itemId)
+				{
+					// Found a match - return the withdraw dose item ID
+					return potion.itemId;
+				}
+			}
+		}
+		return -1;
+	}
+
 	int getIdx(int itemId)
 	{
 		if (potions == null)
