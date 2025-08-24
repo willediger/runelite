@@ -427,9 +427,30 @@ public class TabInterface
 		{
 			if (activeTag != null && Text.removeTags(event.getMenuTarget()).equals(activeTag))
 			{
+				// Add tags for all items
 				for (Integer item : items)
 				{
 					tagManager.addTag(item, activeTag, false);
+				}
+
+				// If this tag has a layout, also add these items to the layout so they appear immediately
+				// even when not present in the bank (eg. only in potion storage).
+				if (activeLayout != null)
+				{
+					boolean modified = false;
+					for (Integer item : items)
+					{
+						int canonical = itemManager.canonicalize(item);
+						if (activeLayout.count(canonical) == 0)
+						{
+							activeLayout.addItem(canonical);
+							modified = true;
+						}
+					}
+					if (modified)
+					{
+						layoutManager.saveLayout(activeLayout);
+					}
 				}
 
 				reloadActiveTab();
@@ -448,6 +469,26 @@ public class TabInterface
 					for (Integer item : items)
 					{
 						tagManager.addTags(item, tags, false);
+					}
+
+					// If the active tag is among the entered tags and it has a layout,
+					// add the items to the layout as well so they show immediately.
+					if (activeTag != null && activeLayout != null && tags.stream().anyMatch(t -> t.equalsIgnoreCase(activeTag)))
+					{
+						boolean modified = false;
+						for (Integer item : items)
+						{
+							int canonical = itemManager.canonicalize(item);
+							if (activeLayout.count(canonical) == 0)
+							{
+								activeLayout.addItem(canonical);
+								modified = true;
+							}
+						}
+						if (modified)
+						{
+							layoutManager.saveLayout(activeLayout);
+						}
 					}
 
 					reloadActiveTab();
